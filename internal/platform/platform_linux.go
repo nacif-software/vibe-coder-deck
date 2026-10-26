@@ -191,6 +191,3 @@ func Frontmost() (string, error) {
 	}
 	return name, nil
 }
-
-// FrontmostApp is filled in by the X11 code; until then nothing is in front.
-func FrontmostApp() (bundleID, name, path string) { return "", "", "" }
