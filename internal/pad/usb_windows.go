@@ -56,7 +56,7 @@ func sendPackets(packets [][]byte) error {
 		return err
 	}
 	want := fmt.Sprintf("vid_%04x&pid_%04x", VendorID, ProductID)
-	iface := fmt.Sprintf("&mi_%02x", configInterface)
+	iface := fmt.Sprintf("&mi_%02x", ConfigInterface)
 	var path string
 	for _, p := range paths {
 		l := strings.ToLower(p)

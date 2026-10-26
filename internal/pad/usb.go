@@ -41,7 +41,7 @@ func (u *USB) SetLED(mode int) error {
 
 // The config interface of the pad: USB interface 1, whose only endpoint is
 // an interrupt OUT pipe.
-const configInterface = 1
+const ConfigInterface = 1
 
 func flatten(packets [][]byte) []byte {
 	flat := make([]byte, 0, len(packets)*PacketSize)

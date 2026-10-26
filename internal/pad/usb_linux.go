@@ -10,11 +10,11 @@ import (
 	"strings"
 )
 
-// hidrawNode is the /dev/hidrawN of the pad's config interface: the kernel's
+// HidrawNode is the /dev/hidrawN of the pad's config interface: the kernel's
 // HID driver takes every HID interface, and writing an output report to its
 // node goes out through the interface's interrupt OUT endpoint. "" when the
 // pad is absent.
-func hidrawNode(vid, pid, iface int) string {
+func HidrawNode(vid, pid, iface int) string {
 	entries, _ := os.ReadDir("/sys/class/hidraw")
 	id := fmt.Sprintf("HID_ID=0003:%08X:%08X", vid, pid)
 	phys := fmt.Sprintf("/input%d\n", iface)
@@ -32,7 +32,7 @@ func hidrawNode(vid, pid, iface int) string {
 }
 
 func sendPackets(packets [][]byte) error {
-	node := hidrawNode(VendorID, ProductID, configInterface)
+	node := HidrawNode(VendorID, ProductID, ConfigInterface)
 	if node == "" {
 		return ErrNotConnected
 	}

@@ -69,6 +69,8 @@ usage: vibe-coder-deck [command] [flags]
   update [--install] [--token T] [--clear-token]
                          look for a newer release and show its notes; --install downloads,
                          verifies and installs it; --token keeps a token for a private repository
+  udev [--install]       print the Linux udev rule that lets you use the pad without root;
+                         --install writes it (asks for your password) and reloads udev
   version
 
 Data: ` + "%s" + `
@@ -99,6 +101,8 @@ func main() {
 		err = mcpCmd(os.Args[2:])
 	case "update":
 		err = updateCmd(args)
+	case "udev":
+		err = udevCmd(args)
 	case "version":
 		fmt.Println("vibe-coder-deck", version, runtime.GOOS+"/"+runtime.GOARCH)
 	case "-h", "--help", "help":
@@ -400,6 +404,24 @@ func appCmd(args []string) error {
 		Version:          version,
 		Icon:             appIcon,
 	})
+}
+
+// udevCmd prints the Linux udev rule, or installs it with --install.
+func udevCmd(args []string) error {
+	fs := flag.NewFlagSet("udev", flag.ContinueOnError)
+	install := fs.Bool("install", false, "write the rule to "+platform.UdevRulePath+" and reload udev")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if !*install {
+		fmt.Print(platform.UdevRule)
+		return nil
+	}
+	if err := platform.InstallUdevRule(); err != nil {
+		return err
+	}
+	fmt.Println("installed", platform.UdevRulePath+"; unplug and replug the pad")
+	return nil
 }
 
 func lastLines(s string, n int) string {

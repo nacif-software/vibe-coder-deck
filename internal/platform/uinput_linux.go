@@ -21,8 +21,10 @@ const (
 	uiDevSetup   = 0x405c5503
 	uiDevCreate  = 0x5501
 	uiDevDestroy = 0x5502
-	uinputPath   = "/dev/uinput"
 )
+
+// uinputPath is the uinput device; tests point it elsewhere.
+var uinputPath = "/dev/uinput"
 
 // uinputSetup is struct uinput_setup: input_id, name[80], ff_effects_max.
 type uinputSetup struct {

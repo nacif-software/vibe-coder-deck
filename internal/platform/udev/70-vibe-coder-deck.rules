@@ -1,0 +1,5 @@
+# Vibe Coder Deck: the macropad's keys (evdev), its config interface (hidraw)
+# and a virtual keyboard to type macros with. Installed by `vibe-coder-deck udev --install`.
+SUBSYSTEM=="input", ATTRS{idVendor}=="1189", ATTRS{idProduct}=="8890", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1189", ATTRS{idProduct}=="8890", TAG+="uaccess"
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
