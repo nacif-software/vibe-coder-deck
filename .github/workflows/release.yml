@@ -25,11 +25,11 @@ jobs:
       CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
       CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
