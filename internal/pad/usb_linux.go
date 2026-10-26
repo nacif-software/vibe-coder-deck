@@ -39,7 +39,7 @@ func sendPackets(packets [][]byte) error {
 	f, err := os.OpenFile(node, os.O_WRONLY, 0)
 	if err != nil {
 		if errors.Is(err, os.ErrPermission) {
-			return fmt.Errorf("%s is not writable: add a udev rule such as `SUBSYSTEM==\"hidraw\", ATTRS{idVendor}==\"%04x\", ATTRS{idProduct}==\"%04x\", MODE=\"0666\"` (then replug the pad)", node, VendorID, ProductID)
+			return fmt.Errorf("%s is not writable: run `vibe-coder-deck udev --install` to add the udev rule, then replug the pad", node)
 		}
 		return err
 	}
