@@ -4,3 +4,6 @@
 *.db-journal
 .DS_Store
 HANDOFF.md
+
+# superpowers scratch (plan ledgers)
+.superpowers/
