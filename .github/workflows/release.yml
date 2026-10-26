@@ -21,6 +21,9 @@ jobs:
     runs-on: macos-latest
     env:
       VERSION: ${{ github.ref_name }}
+      # secrets cannot be read in a step's `if`; through the job env they can
+      CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+      CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,10 +35,7 @@ jobs:
           cache: true
 
       - name: Import the signing certificate
-        if: ${{ secrets.MACOS_CERT_P12 != '' }}
-        env:
-          CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
-          CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        if: ${{ env.CERT_P12 != '' }}
         run: |
           set -euo pipefail
           KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
