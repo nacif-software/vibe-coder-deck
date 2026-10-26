@@ -11,6 +11,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/nacif-software/vibe-coder-deck/internal/update"
 	"io"
 	"log"
 	"net/http"
@@ -36,6 +37,13 @@ import (
 
 var version = "dev"
 
+// updateRepo is the GitHub repository whose releases the app installs
+// (-ldflags "-X main.updateRepo=owner/name" points elsewhere).
+var updateRepo = "nacif-software/vibe-coder-deck"
+
+//go:embed CHANGELOG.md
+var changelog string
+
 //go:embed assets/icon-1024.png
 var appIcon []byte
 
@@ -58,6 +66,9 @@ usage: vibe-coder-deck [command] [flags]
                          (the app also serves MCP over HTTP at http://127.0.0.1:7071/mcp)
   mcp install [--client all|claude-code|claude-desktop|cursor|windsurf|codex] [--transport stdio|http]
                          register the MCP server with those AI tools
+  update [--install] [--token T] [--clear-token]
+                         look for a newer release and show its notes; --install downloads,
+                         verifies and installs it; --token keeps a token for a private repository
   version
 
 Data: ` + "%s" + `
@@ -86,6 +97,8 @@ func main() {
 		err = pressCmd(os.Args[2:])
 	case "mcp":
 		err = mcpCmd(os.Args[2:])
+	case "update":
+		err = updateCmd(args)
 	case "version":
 		fmt.Println("vibe-coder-deck", version, runtime.GOOS+"/"+runtime.GOARCH)
 	case "-h", "--help", "help":
@@ -124,6 +137,8 @@ func padWriter() pad.Writer { return pad.NewCLI(os.Getenv("VCK_MACROPAD")) }
 
 // deckRuntime is the running program: store, dispatcher, page and hotkeys.
 type deckRuntime struct {
+	updater     *update.Updater
+	updCancel   context.CancelFunc
 	store       *deck.Store
 	addr        string
 	handler     http.Handler
@@ -210,6 +225,13 @@ func startDeck(addr, dbPath string) (*deckRuntime, error) {
 		go restart()
 		return nil
 	}
+	up := newUpdater(store)
+	update.CleanOld(up.Target)
+	server.Updates, server.Version = up, version
+	r.updater = up
+	uctx, cancelUpdates := context.WithCancel(context.Background())
+	r.updCancel = cancelUpdates
+	go up.Run(uctx, 20*time.Second, 6*time.Hour)
 	platform.WatchPad()
 	syncFn := func(dryRun bool) (deck.Plan, error) {
 		return deck.Sync(store, padWriter(), platform.HotkeyModifiers, dryRun)
@@ -313,6 +335,9 @@ func (r *deckRuntime) Sync() (string, error) {
 }
 
 func (r *deckRuntime) Close() {
+	if r.updCancel != nil {
+		r.updCancel()
+	}
 	r.mu.Lock()
 	if r.stopHotkeys != nil {
 		r.stopHotkeys()
@@ -854,3 +879,86 @@ func (platformApps) Choose() (web.AppInfo, bool, error) {
 }
 
 func (platformApps) Icon(path string) ([]byte, error) { return platform.AppIconPNG(path, 128) }
+
+// Updater is the app's release updater.
+func (r *deckRuntime) Updater() *update.Updater { return r.updater }
+
+// githubToken is the token for a private releases repository: the
+// environment first, then the one kept with `update --token`.
+func githubToken(store *deck.Store) string {
+	if t := os.Getenv("VCD_GITHUB_TOKEN"); t != "" {
+		return t
+	}
+	t, _ := store.GitHubToken()
+	return t
+}
+
+func newUpdater(store *deck.Store) *update.Updater {
+	up := update.New(update.Source{Repo: updateRepo, Token: githubToken(store)}, version, update.TargetFromExecutable(executablePath()))
+	up.Changelog = changelog
+	if auto, err := store.AutoUpdate(); err == nil {
+		up.SetAuto(auto)
+	}
+	return up
+}
+
+// updateCmd looks for a newer release and shows its notes; --install
+// downloads, verifies and installs it; --token keeps a GitHub token for a
+// private releases repository.
+func updateCmd(args []string) error {
+	fs := flag.NewFlagSet("update", flag.ContinueOnError)
+	db := dbFlag(fs)
+	install := fs.Bool("install", false, "download, verify and install the newest release")
+	token := fs.String("token", "", "keep a GitHub token for reading a private releases repository")
+	clear := fs.Bool("clear-token", false, "forget the kept token")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	store, err := deck.Open(*db)
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+	if *token != "" || *clear {
+		tok := *token
+		if *clear {
+			tok = ""
+		}
+		if err := store.SetGitHubToken(tok); err != nil {
+			return err
+		}
+		fmt.Println(map[bool]string{true: "token kept", false: "token forgotten"}[tok != ""])
+		return nil
+	}
+	up := newUpdater(store)
+	ctx := context.Background()
+	st, err := up.Check(ctx)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("current: %s\nlatest:  %s (%s)\n", st.Current, st.Latest.Version, st.Latest.PublishedAt.Format("2006-01-02"))
+	if st.Latest.Notes != "" {
+		fmt.Println("\n" + strings.TrimSpace(st.Latest.Notes) + "\n")
+	}
+	if !*install {
+		if st.State == update.StateAvailable {
+			fmt.Println("a newer release: run `vibe-coder-deck update --install` to install it")
+		} else {
+			fmt.Println("up to date")
+		}
+		return nil
+	}
+	if up.Target == "" {
+		return errors.New("this binary is not the installed app (Vibe Coder Deck.app or vibe-coder-deck.exe): install the release by hand")
+	}
+	fmt.Printf("downloading %s…\n", st.Latest.Version)
+	if _, err := up.Download(ctx); err != nil {
+		return err
+	}
+	fmt.Println("verified; installing…")
+	if err := up.Install(); err != nil {
+		return err
+	}
+	fmt.Printf("installed %s into %s; open the app again to run it\n", st.Latest.Version, up.Target)
+	return nil
+}

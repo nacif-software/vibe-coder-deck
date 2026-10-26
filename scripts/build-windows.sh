@@ -5,7 +5,7 @@
 # command-line verbs on Windows build without that flag.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo dev)"
+VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo dev)}"
 mkdir -p dist
 CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-X main.version=$VERSION -H windowsgui" -o dist/vibe-coder-deck.exe .
 echo "built dist/vibe-coder-deck.exe ($VERSION)"

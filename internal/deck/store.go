@@ -410,3 +410,24 @@ func (s *Store) ViewsIn(pid int64, modifiers string) ([]View, error) {
 	}
 	return out, nil
 }
+
+// AutoUpdate reports whether newer releases are downloaded by themselves (on
+// until turned off).
+func (s *Store) AutoUpdate() (bool, error) {
+	v, err := s.meta("auto_update")
+	return v != "0", err
+}
+
+func (s *Store) SetAutoUpdate(on bool) error {
+	return s.setMeta("auto_update", map[bool]string{true: "1", false: "0"}[on])
+}
+
+// LastSeenVersion is the version whose "What's new" the user has seen.
+func (s *Store) LastSeenVersion() (string, error) { return s.meta("last_seen_version") }
+
+func (s *Store) SetLastSeenVersion(v string) error { return s.setMeta("last_seen_version", v) }
+
+// GitHubToken is the token used to read a private releases repository ("" = none).
+func (s *Store) GitHubToken() (string, error) { return s.meta("github_token") }
+
+func (s *Store) SetGitHubToken(tok string) error { return s.setMeta("github_token", tok) }

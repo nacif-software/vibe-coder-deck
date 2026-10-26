@@ -368,3 +368,17 @@ input[type=checkbox] { width: 16px; height: 16px; padding: 0; accent-color: var(
 .ui-dialog-message { margin: 0 0 16px; line-height: 1.5; }
 .ui-dialog input { width: 100%; margin-bottom: 16px; }
 .ui-dialog .btn-primary.danger { background: var(--danger); border-color: var(--danger); }
+
+/* updates: the banner and the drawer's What's new */
+.alert-update { border-color: var(--brand); }
+.alert-update .btn-ghost { margin-left: auto; }
+.updates .row { align-items: center; flex-wrap: wrap; }
+.release-list { max-height: 380px; overflow: auto; padding-right: 4px; }
+.release { padding: 10px 0; border-top: 1px solid rgba(128, 128, 128, .25); }
+.release:first-child { border-top: 0; }
+.release h3 { margin: 0 0 4px; font-size: 14px; display: flex; gap: 8px; align-items: baseline; }
+.release .tag { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: var(--brand); color: #fff; }
+.release h4, .release h5, .release h6 { margin: 8px 0 2px; font-size: 13px; }
+.release p, .release ul, .release ol { margin: 4px 0; font-size: 13px; line-height: 1.45; }
+.release ul, .release ol { padding-left: 18px; }
+.release code { font-size: 12px; }

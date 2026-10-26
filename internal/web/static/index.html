@@ -38,6 +38,12 @@
     <span id="sync-text" class="muted"></span>
     <button id="sync-button" class="btn btn-primary btn-sm" type="button">Try again</button>
   </div>
+  <div id="update-banner" class="alert alert-update hidden">
+    <strong id="update-banner-text"></strong>
+    <button id="update-banner-notes" class="btn btn-outline btn-sm" type="button">What's new</button>
+    <button id="update-banner-action" class="btn btn-primary btn-sm" type="button"></button>
+    <button id="update-banner-close" class="btn btn-ghost btn-sm" type="button" title="Not now">Later</button>
+  </div>
 </div>
 
 <main class="app" id="view-devices">
@@ -247,6 +253,23 @@
     <h2>App</h2>
     <p class="muted">Quit and open the app again, for example after allowing a permission.</p>
     <button class="btn btn-outline btn-sm restart" type="button">Restart app</button>
+  </section>
+  <section id="updates" class="drawer-section updates">
+    <div class="logs-head">
+      <h2>Updates</h2>
+      <span id="update-version" class="muted"></span>
+    </div>
+    <div class="row">
+      <button id="update-check" class="btn btn-outline btn-sm" type="button">Check for updates</button>
+      <button id="update-action" class="btn btn-primary btn-sm hidden" type="button"></button>
+      <span id="update-text" class="muted"></span>
+    </div>
+    <label class="switch"><input id="update-auto" type="checkbox"> Download updates automatically</label>
+    <p id="update-note" class="muted hidden"></p>
+    <details id="whats-new">
+      <summary>What's new</summary>
+      <div id="release-list" class="release-list"></div>
+    </details>
   </section>
   <section class="drawer-section logs">
     <div class="logs-head">

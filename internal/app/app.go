@@ -4,8 +4,10 @@
 package app
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
+	"github.com/nacif-software/vibe-coder-deck/internal/update"
 	"log"
 	"net/http"
 	"os"
@@ -29,6 +31,7 @@ type Deck interface {
 	HotkeyError() error
 	SetRestart(func())
 	Close()
+	Updater() *update.Updater // nil when this build cannot look for releases
 }
 
 // Options wires the desktop app to the rest of the program.
@@ -146,6 +149,17 @@ func Run(o Options) error {
 			menu.Add(on).SetEnabled(false)
 		}
 	}
+	if startErr == nil {
+		if up := deck.Updater(); up != nil {
+			menu.AddSeparator()
+			item := menu.Add("Check for updates…")
+			item.OnClick(func(*application.Context) { go updateClick(up, o, restart) })
+			up.Watch(func(st update.Status) {
+				item.SetLabel(updateLabel(st))
+				menu.Update()
+			})
+		}
+	}
 	menu.AddSeparator()
 	login := menu.AddCheckbox("Start at login", o.LoginItemEnabled())
 	login.OnClick(func(ctx *application.Context) {
@@ -171,4 +185,69 @@ func Run(o Options) error {
 	}
 	fmt.Fprintln(os.Stderr, "vibe-coder-deck: quit")
 	return nil
+}
+
+// updateLabel is the menu bar item for where the updater is.
+func updateLabel(st update.Status) string {
+	v := ""
+	if st.Latest != nil {
+		v = st.Latest.Version
+	}
+	switch st.State {
+	case update.StateChecking:
+		return "Checking for updates…"
+	case update.StateAvailable:
+		if st.Target == "" {
+			return v + " is available (this build cannot install it)"
+		}
+		return "Download " + v + "…"
+	case update.StateDownloading:
+		return fmt.Sprintf("Downloading %s… %d%%", v, int(st.Progress*100))
+	case update.StateReady:
+		return "Restart to update to " + v
+	case update.StateInstalling:
+		return "Installing " + v + "…"
+	case update.StateInstalled:
+		return "Restart to finish updating to " + v
+	default:
+		return "Check for updates…"
+	}
+}
+
+// updateClick does the next step for the updater's state: check, download,
+// or install and restart.
+func updateClick(up *update.Updater, o Options, restart func()) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+	st := up.Status()
+	switch {
+	case st.State == update.StateReady:
+		if err := up.Install(); err != nil {
+			o.Notify("Update failed", err.Error())
+			return
+		}
+		restart()
+	case st.State == update.StateInstalled:
+		restart()
+	case st.Latest != nil && st.Target != "" && (st.State == update.StateAvailable || st.State == update.StateError):
+		if _, err := up.Download(ctx); err != nil {
+			o.Notify("Download failed", err.Error())
+			return
+		}
+		o.Notify("Update ready", st.Latest.Version+" is downloaded. Choose \"Restart to update\" in the menu.")
+	default:
+		st, err := up.Check(ctx)
+		switch {
+		case err != nil:
+			o.Notify("Could not check for updates", err.Error())
+		case st.State == update.StateUpToDate:
+			o.Notify("Up to date", "Vibe Coder Deck "+st.Current+" is the latest version.")
+		case st.State == update.StateAvailable && st.Target != "" && st.Auto && st.Release:
+			if _, err := up.Download(ctx); err == nil {
+				o.Notify("Update ready", st.Latest.Version+" is downloaded. Choose \"Restart to update\" in the menu.")
+			}
+		case st.State == update.StateAvailable:
+			o.Notify("Update available", st.Latest.Version+" is out: choose \"Download\" in the menu or open the app.")
+		}
+	}
 }

@@ -1179,6 +1179,155 @@
     });
   }).catch(() => {});
 
+  /* ---- updates (the drawer's Updates section and a banner) --------------- */
+  // The app looks for newer releases by itself; the page shows where it is
+  // and offers the next step. Nothing is installed without a click.
+  let upd = null;        // the last /api/update answer
+  let updTimer = null;
+  let updDismissed = ''; // the version whose banner was closed with Later
+  const vlabel = (v) => (v ? (v.startsWith('v') ? v : 'v' + v) : '');
+  const busyStates = ['checking', 'downloading', 'installing'];
+  function updateWords(st) {
+    const latest = st.latest ? vlabel(st.latest.version) : '';
+    switch (st.state) {
+      case 'unavailable': return ['This build cannot look for updates.', ''];
+      case 'checking': return ['Checking…', ''];
+      case 'up-to-date': return [`Up to date${st.checked_at ? ' (checked ' + fmt(st.checked_at) + ')' : ''}.`, ''];
+      case 'available': return [`${latest} is available.`, st.target ? `Download ${latest}` : ''];
+      case 'downloading': return [`Downloading ${latest}… ${Math.round((st.progress || 0) * 100)}%`, ''];
+      case 'ready': return [`${latest} is downloaded and verified.`, 'Restart to update'];
+      case 'installing': return [`Installing ${latest}…`, ''];
+      case 'installed': return [`${latest} is installed.`, 'Restart now'];
+      case 'error': return [st.error || 'Something went wrong.', st.latest && st.target ? 'Try again' : ''];
+      default: return [st.checked_at ? `Checked ${fmt(st.checked_at)}.` : 'Not checked yet.', ''];
+    }
+  }
+  function renderUpdate() {
+    if (!upd) return;
+    const st = upd.status;
+    const [text, action] = updateWords(st);
+    $('update-version').textContent = `Version ${st.current || 'dev'}${st.release === false && st.state !== 'unavailable' ? ' (development build)' : ''}`;
+    $('update-text').textContent = text;
+    $('update-action').textContent = action;
+    $('update-action').classList.toggle('hidden', !action);
+    $('update-check').disabled = busyStates.includes(st.state) || st.state === 'unavailable';
+    $('update-auto').checked = !!st.auto;
+    $('update-auto').disabled = st.state === 'unavailable';
+    const note = st.state === 'unavailable' ? ''
+      : !st.target ? 'Updates install only in the installed app (Vibe Coder Deck.app or vibe-coder-deck.exe).'
+        : st.release === false ? 'Development builds are not downloaded automatically; use the buttons.' : '';
+    $('update-note').textContent = note;
+    $('update-note').classList.toggle('hidden', !note);
+    const latest = st.latest ? vlabel(st.latest.version) : '';
+    const show = ['available', 'ready', 'installed'].includes(st.state) && !!st.target && latest !== updDismissed;
+    $('update-banner').classList.toggle('hidden', !show);
+    if (show) {
+      $('update-banner-text').textContent = st.state === 'available' ? `Vibe Coder Deck ${latest} is available.`
+        : st.state === 'ready' ? `Vibe Coder Deck ${latest} is ready to install.` : `Vibe Coder Deck ${latest} is installed.`;
+      $('update-banner-action').textContent = action;
+    }
+  }
+  async function loadUpdate() {
+    try { upd = await api('GET', '/api/update'); renderUpdate(); } catch { /* the app is restarting */ }
+    const st = upd && upd.status;
+    clearTimeout(updTimer);
+    updTimer = setTimeout(loadUpdate, st && busyStates.includes(st.state) ? 500 : 60000);
+  }
+  async function updateAct() {
+    const st = upd && upd.status;
+    if (!st) return;
+    try {
+      if (st.state === 'ready') {
+        const ok = await dialog({ title: 'Install the update', message: `Install Vibe Coder Deck ${vlabel(st.latest.version)} and restart the app? Nothing you set up changes.`, ok: 'Install and restart' });
+        if (!ok) return;
+        await api('POST', '/api/update/install');
+      } else if (st.state === 'installed') {
+        await api('POST', '/api/app/restart');
+      } else if (st.latest && (st.state === 'available' || st.state === 'error')) {
+        await api('POST', '/api/update/download');
+      } else {
+        await api('POST', '/api/update/check');
+      }
+    } catch (err) { tell(err.message); }
+    loadUpdate();
+  }
+  $('update-check').addEventListener('click', async () => {
+    $('update-check').disabled = true;
+    $('update-text').textContent = 'Checking…';
+    try { await api('POST', '/api/update/check'); } catch (err) { tell(err.message); }
+    loadUpdate();
+  });
+  $('update-action').addEventListener('click', updateAct);
+  $('update-banner-action').addEventListener('click', updateAct);
+  $('update-banner-close').addEventListener('click', () => {
+    updDismissed = upd && upd.status.latest ? vlabel(upd.status.latest.version) : '';
+    renderUpdate();
+  });
+  $('update-auto').addEventListener('change', async () => {
+    try { await api('PUT', '/api/update/auto', { on: $('update-auto').checked }); } catch (err) { tell(err.message); }
+    loadUpdate();
+  });
+
+  // Patch notes: a small markdown renderer for release notes (headings,
+  // lists, bold, code, links); everything else is text.
+  function md(src) {
+    const inline = (s) => esc(s)
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    const out = [];
+    let list = null;
+    const closeList = () => { if (list) { out.push(`</${list}>`); list = null; } };
+    for (const raw of String(src || '').split('\n')) {
+      const line = raw.trimEnd();
+      let m;
+      if ((m = line.match(/^(#{1,6})\s+(.*)$/))) { closeList(); const n = Math.min(m[1].length + 2, 6); out.push(`<h${n}>${inline(m[2])}</h${n}>`); }
+      else if ((m = line.match(/^\s*[-*]\s+(.*)$/))) { if (list !== 'ul') { closeList(); list = 'ul'; out.push('<ul>'); } out.push(`<li>${inline(m[1])}</li>`); }
+      else if ((m = line.match(/^\s*\d+[.)]\s+(.*)$/))) { if (list !== 'ol') { closeList(); list = 'ol'; out.push('<ol>'); } out.push(`<li>${inline(m[1])}</li>`); }
+      else if (!line.trim()) closeList();
+      else { closeList(); out.push(`<p>${inline(line)}</p>`); }
+    }
+    closeList();
+    return out.join('');
+  }
+  let releasesLoaded = false;
+  async function loadReleases(force) {
+    if (releasesLoaded && !force) return;
+    $('release-list').innerHTML = '<p class="muted">Loading…</p>';
+    try {
+      const out = await api('GET', '/api/releases');
+      releasesLoaded = true;
+      const cur = vlabel((upd && upd.status.current) || out.current || '');
+      const items = out.releases.map((r) => {
+        const v = vlabel(r.version);
+        const mine = cur === v || cur.startsWith(v + '-');
+        const date = r.published_at && !r.published_at.startsWith('0001') ? r.published_at.slice(0, 10) : ''; // the day as published, no time zone shift
+        return `<article class="release${mine ? ' current' : ''}">` +
+          `<h3>${esc(v)}${mine ? ' <span class="tag">this version</span>' : ''} <small class="muted">${esc(date)}</small></h3>` +
+          (md(r.notes) || '<p class="muted">No notes.</p>') +
+          (r.url ? `<p><a href="${esc(r.url)}" target="_blank" rel="noopener">Release page</a></p>` : '') +
+          '</article>';
+      });
+      $('release-list').innerHTML = (items.join('') || '<p class="muted">No releases yet.</p>') +
+        (out.source === 'changelog' ? '<p class="muted">From the changelog built into the app (GitHub was not reached).</p>' : '');
+    } catch (err) { $('release-list').innerHTML = `<p class="muted">${esc(err.message)}</p>`; }
+  }
+  $('whats-new').addEventListener('toggle', () => { if ($('whats-new').open) loadReleases(); });
+  $('update-banner-notes').addEventListener('click', () => {
+    $('menu').click();
+    $('whats-new').open = true;
+    loadReleases();
+    $('whats-new').scrollIntoView({ block: 'nearest' });
+  });
+  // The first start of a new version opens its notes once.
+  loadUpdate().then(() => {
+    if (!upd || !upd.whats_new) return;
+    $('menu').click();
+    $('whats-new').open = true;
+    loadReleases(true);
+    api('POST', '/api/update/seen').catch(() => {});
+  });
+
   /* ---- MCP install ------------------------------------------------------- */
   async function loadMCP() {
     let info;

@@ -25,6 +25,7 @@
 - [How it works](#how-it-works)
 - [Quick start](#quick-start)
 - [The app](#the-app)
+- [Updates and patch notes](#updates-and-patch-notes)
 - [Macros](#macros)
 - [Profiles](#profiles)
 - [Command line](#command-line)
@@ -79,6 +80,7 @@ Go, SQLite, no services, no accounts. macOS today, Windows in preview.
 | **Native app** | window (Wails / WKWebView), menu bar icon, Dock presence, start at login, light and dark |
 | **MCP** | 11 tools over HTTP and stdio, one-click install into Claude Code, Claude Desktop, Cursor, Windsurf, Codex |
 | **MCP App** | the pad rendered inside the chat, editable by the user, reported back to the agent |
+| **Releases** | GitHub Releases for macOS (universal) and Windows, patch notes in the app, automatic updates verified with SHA-256 |
 
 ## How it works
 
@@ -117,7 +119,17 @@ and a banner offers **Apply to pad** to retry.
 - The `macropad` CLI from [vibe-coder-keyboard](https://github.com/nacif-software/vibe-coder-keyboard)
   on your `PATH` (or point `VCK_MACROPAD` at it). It is what actually writes the pad.
 
-### Build and install the app
+### Download a release
+
+Every version is on the [Releases](https://github.com/nacif-software/vibe-coder-deck/releases) page:
+
+| File | What to do |
+|---|---|
+| `Vibe-Coder-Deck-vX.Y.Z-macos.zip` | unzip, drag **Vibe Coder Deck.app** to Applications, open it. The app is not notarized yet: the first time, right-click it and choose **Open** (or allow it under System Settings → Privacy & Security). |
+| `vibe-coder-deck-vX.Y.Z-windows-amd64.zip` | unzip `vibe-coder-deck.exe` anywhere and run it (it lives in the tray). |
+| `checksums.txt` | SHA-256 of both files, what the app checks before it updates itself. |
+
+### Or build and install it yourself
 
 ```sh
 git clone https://github.com/nacif-software/vibe-coder-deck
@@ -177,6 +189,31 @@ The page's own menu (☰, top right) has **Restart app**, **Logs** (the tail of 
 with copy and open buttons), **Debug mode** (also logs polled requests, recorder events, raw pad
 keystrokes and hotkeys; remembered across restarts) and the **AI setup (MCP)** section. The ☀︎/☾
 button switches light and dark; until pressed the page follows the system.
+
+## Updates and patch notes
+
+The app keeps itself current. Twenty seconds after it starts, and every six hours, it asks GitHub
+for the newest release. With **Download updates automatically** on (the default) a newer release is
+downloaded in the background and verified against the release's `checksums.txt`; the page then shows
+a banner and the menu bar item reads **Restart to update**. Nothing is installed until you click:
+the app on disk is swapped for the new one and the app restarts. Development builds (made from a
+commit, not a tag) are never updated automatically.
+
+**What's new** in the page's menu (☰) lists every release with its notes, straight from GitHub, or
+from the changelog built into the app when GitHub cannot be reached. The first start of a new
+version opens it once.
+
+```sh
+vibe-coder-deck update              # current and latest version, with the notes
+vibe-coder-deck update --install    # download, verify and install the newest release
+```
+
+Releases of a private repository need a token: `VCD_GITHUB_TOKEN` in the environment, or
+`vibe-coder-deck update --token TOKEN` to keep one (`--clear-token` forgets it). A public
+repository needs none.
+
+Without a signing certificate in the release workflow (see [Releasing](#releasing)) the app is
+signed ad hoc, and macOS asks for Accessibility and Input Monitoring again after an update.
 
 ## Macros
 
@@ -244,6 +281,9 @@ vibe-coder-deck [command] [flags]
   mcp [--db PATH]        MCP server on stdio, for an AI agent to configure the pad
   mcp install [--client all|claude-code|claude-desktop|cursor|windsurf|codex] [--transport stdio|http]
                          register the MCP server with those AI tools
+  update [--install] [--token T] [--clear-token]
+                         look for a newer release and show its notes; --install downloads,
+                         verifies and installs it; --token keeps a token for a private repository
   version
 ```
 
@@ -328,14 +368,18 @@ internal/app/            the native app: Wails window, menu bar icon, Dock, tray
 internal/deck/           the domain: slots, modes, keys, macros, profiles, SQLite store,
                          dispatcher, cooldown / single-instance gate, pad sync, key icons
 internal/mcpserver/      MCP tools, the MCP App view (ui/pad.html), client installers
+internal/update/         releases: versions, the GitHub API, the changelog, download, verify, install
 internal/pad/            wrapper around the macropad CLI and USB detection of the pad
 internal/platform/       OS specifics: global hotkeys, keystroke playback, the recorder,
                          permissions, start at login, Dock, frontmost app, pad watcher
 internal/web/            HTTP + JSON API and the page (static/index.html, app.js, style.css)
 internal/debuglog/       the log file and debug mode
-scripts/build-app.sh     macOS bundle, .icns, signing, --install
+scripts/build-app.sh     macOS bundle, .icns, signing, --install (VCD_ARCHES="arm64 amd64" for universal)
 scripts/build-windows.sh Windows tray build (dist/vibe-coder-deck.exe)
+scripts/release.sh       tags a version and pushes the tag; GitHub Actions does the rest
 scripts/gen-icons.py     draws the app and tray icons (standard library only)
+.github/workflows/       release.yml (tag → build → GitHub Release), test.yml (pull requests)
+CHANGELOG.md             the patch notes, one section per version (Keep a Changelog)
 assets/                  the app icon
 docs/                    design notes and plans
 ```
@@ -359,6 +403,19 @@ The page is plain HTML, CSS and JavaScript embedded in the binary: no build step
 It never uses the browser's `alert`, `confirm` or `prompt` (the native webview has none); dialogs
 are the page's own.
 
+### Releasing
+
+1. Write the version's notes in `CHANGELOG.md` under `## [X.Y.Z] - YYYY-MM-DD` and commit.
+2. `scripts/release.sh X.Y.Z` tags `vX.Y.Z` and pushes the tag.
+3. GitHub Actions (`release.yml`, a macOS runner) runs the tests, builds the universal macOS app
+   and the Windows exe, writes `checksums.txt` and publishes the Release with that section as its
+   notes. Installed apps see it within six hours, or at once with **Check for updates**.
+
+To sign the macOS app in the workflow, add two repository secrets: `MACOS_CERT_P12` (the
+certificate and key as a base64 `.p12`: `base64 -i cert.p12 | pbcopy`) and `MACOS_CERT_PASSWORD`.
+A self-signed certificate is enough for macOS to keep the permission grants across updates; a
+Developer ID certificate also satisfies Gatekeeper on other Macs.
+
 ## Troubleshooting
 
 | Symptom | Cause and fix |
@@ -376,7 +433,9 @@ are the page's own.
 - **Windows:** the tray app, the page, scripts, shell commands and macros (via PowerShell `SendKeys`)
   build and run; recorded key down / key up steps are not played back yet, and the pad watcher and
   recorder are stubs.
-- **Planned:** proper code signing and notarization, Windows parity, more MCP App hosts.
+- **Updates:** released through GitHub Actions; the app updates itself on both systems (the
+  Windows path is built and unit-tested, not yet exercised on a real machine).
+- **Planned:** Developer ID signing and notarization, Windows parity, more MCP App hosts.
 
 ## Related
 

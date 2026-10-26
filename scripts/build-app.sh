@@ -12,15 +12,31 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo dev)"
+VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo dev)}"
+# Architectures in the binary: this machine's by default (quick), both for a
+# release (VCD_ARCHES="arm64 amd64" makes a universal binary with lipo).
+ARCHES="${VCD_ARCHES:-$(uname -m)}"
+export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-12.0}"
 APP="dist/Vibe Coder Deck.app"
 CONTENTS="$APP/Contents"
 
 rm -rf "$APP"
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
 
-echo "building $VERSION"
-go build -trimpath -ldflags "-X main.version=$VERSION" -o "$CONTENTS/MacOS/vibe-coder-deck" .
+echo "building $VERSION for $ARCHES"
+BIN="$CONTENTS/MacOS/vibe-coder-deck"
+slices=()
+for arch in $ARCHES; do
+  [ "$arch" = "x86_64" ] && arch=amd64
+  CGO_ENABLED=1 GOARCH="$arch" go build -trimpath -ldflags "-X main.version=$VERSION" -o "dist/vibe-coder-deck-$arch" .
+  slices+=("dist/vibe-coder-deck-$arch")
+done
+if [ "${#slices[@]}" -gt 1 ]; then
+  lipo -create "${slices[@]}" -output "$BIN"
+else
+  cp "${slices[0]}" "$BIN"
+fi
+rm -f "${slices[@]}"
 
 cat > "$CONTENTS/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -71,7 +87,9 @@ rm -rf "$ICONSET"
 # keychain has it: macOS ties Accessibility and Input Monitoring to the
 # certificate, so they survive rebuilds. Without it, sign ad hoc (the grants
 # then have to be given again after every build).
-IDENTITY="$(security find-identity -p codesigning 2>/dev/null | awk '/"Vibe Coder Deck Local Signing"/ { print $2; exit }')"
+# VCD_SIGN_IDENTITY names another identity (a Developer ID, or the one a CI
+# run imported); "-" signs ad hoc.
+IDENTITY="${VCD_SIGN_IDENTITY:-$(security find-identity -p codesigning 2>/dev/null | awk '/"Vibe Coder Deck Local Signing"/ { print $2; exit }')}"
 codesign --force --deep --sign "${IDENTITY:--}" "$APP"
 echo "signed with ${IDENTITY:-ad hoc}"
 echo "built $APP"

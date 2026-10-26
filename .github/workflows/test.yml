@@ -1,0 +1,20 @@
+# Runs the tests on pull requests (and by hand). macOS, because the platform
+# code is cgo for darwin; the Windows build is cross-compiled from there.
+name: Test
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go vet ./...
+      - run: go test ./...
+      - run: CGO_ENABLED=0 GOOS=windows go build -o /dev/null .

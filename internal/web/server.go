@@ -107,7 +107,12 @@ type Server struct {
 	Press      PressFunc
 	MCP        *MCPInfo
 	MCPInstall MCPInstallFunc
-	mux        *http.ServeMux
+	// Updates looks for newer releases; nil when this build cannot. Version
+	// is the running version, shown on the page.
+	Updates  Updates
+	Version  string
+	relCache releaseCache
+	mux      *http.ServeMux
 }
 
 func New(store *deck.Store, modifiers string, sync SyncFunc) *Server {
@@ -135,6 +140,7 @@ func New(store *deck.Store, modifiers string, sync SyncFunc) *Server {
 	s.mux.HandleFunc("PUT /api/macros/{id}", s.saveMacro)
 	s.mux.HandleFunc("DELETE /api/macros/{id}", s.deleteMacro)
 	s.mux.HandleFunc("POST /api/app/restart", s.restart)
+	s.routeUpdates()
 	assets, _ := fs.Sub(static, "static")
 	s.mux.Handle("GET /", http.FileServerFS(assets))
 	return s
@@ -458,7 +464,7 @@ func (s *Server) requestPermission(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) appInfo(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, 200, map[string]bool{"can_restart": s.Restart != nil})
+	writeJSON(w, 200, map[string]any{"can_restart": s.Restart != nil, "version": s.Version})
 }
 
 func (s *Server) restart(w http.ResponseWriter, r *http.Request) {

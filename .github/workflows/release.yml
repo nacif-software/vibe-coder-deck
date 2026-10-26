@@ -1,0 +1,87 @@
+# Builds and publishes a GitHub Release when a version tag (v1.2.3) is pushed:
+# a universal macOS app (zip), a Windows exe (zip) and checksums.txt, with the
+# tag's section of CHANGELOG.md as the notes. The app's updater reads these.
+#
+# Signing: with the secrets MACOS_CERT_P12 (a .p12 in base64) and
+# MACOS_CERT_PASSWORD the bundle is signed with that certificate, so macOS
+# keeps the Accessibility / Input Monitoring grants across updates. Without
+# them it is signed ad hoc and macOS asks again after an update.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: macos-latest
+    env:
+      VERSION: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Import the signing certificate
+        if: ${{ secrets.MACOS_CERT_P12 != '' }}
+        env:
+          CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          echo "$CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p actions "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p actions "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -s -k actions "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
+          IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN" | awk -F'"' 'NR==1 {print $2}')"
+          echo "VCD_SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+          echo "signing with $IDENTITY"
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build the macOS app (universal)
+        run: VCD_ARCHES="arm64 amd64" scripts/build-app.sh
+
+      - name: Build the Windows app
+        run: scripts/build-windows.sh
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          cd dist
+          ditto -c -k --keepParent "Vibe Coder Deck.app" "Vibe-Coder-Deck-$VERSION-macos.zip"
+          zip -q "vibe-coder-deck-$VERSION-windows-amd64.zip" vibe-coder-deck.exe
+          shasum -a 256 *.zip > checksums.txt
+          cat checksums.txt
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          python3 - "$VERSION" <<'PY' > notes.md
+          import re, sys
+          v = sys.argv[1].lstrip('v')
+          md = open('CHANGELOG.md', encoding='utf-8').read()
+          m = re.search(r'^## \[' + re.escape(v) + r'\][^\n]*\n(.*?)(?=^## \[|\Z)', md, re.S | re.M)
+          print((m.group(1).strip() if m else '') or f'Vibe Coder Deck v{v}')
+          PY
+          cat notes.md
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$VERSION" --title "Vibe Coder Deck $VERSION" --notes-file notes.md \
+            dist/*.zip dist/checksums.txt
