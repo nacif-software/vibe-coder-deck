@@ -1,3 +1,5 @@
+//go:build darwin || windows
+
 // Package platform is everything that differs per operating system: global
 // hotkeys, keystrokes, the frontmost app, notifications.
 package platform
