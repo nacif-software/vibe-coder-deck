@@ -7,6 +7,13 @@ app under **What's new**.
 
 ## [Unreleased]
 
+### Added
+- Linux (preview): the app, the page, scripts, shell commands, macros and the recorder run on
+  Linux. The pad's keys are read from its own input device (evdev, grabbed and forwarded) and
+  macros are typed through a uinput virtual keyboard, so X11 and Wayland behave the same; "app in
+  front" (profile switching) works on X11. `vibe-coder-deck udev --install` sets up device access.
+  Releases carry `vibe-coder-deck-vX.Y.Z-linux-amd64.zip` and the app updates itself in place.
+
 ## [0.1.1] - 2026-10-26
 
 ### Changed

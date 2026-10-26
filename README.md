@@ -13,6 +13,7 @@
   <img alt="Go 1.26" src="https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white">
   <img alt="macOS" src="https://img.shields.io/badge/macOS-12%2B-000000?logo=apple&logoColor=white">
   <img alt="Windows (preview)" src="https://img.shields.io/badge/Windows-preview-0078D6?logo=windows&logoColor=white">
+  <img alt="Linux (preview)" src="https://img.shields.io/badge/Linux-preview-FCC624?logo=linux&logoColor=black">
   <img alt="MCP" src="https://img.shields.io/badge/MCP-server%20%2B%20app-7C3AED">
 </p>
 
@@ -55,7 +56,7 @@ no launching apps, no scripts.
 - speaks the **Model Context Protocol**, so an agent such as Claude Code can configure the keys,
   write the pad and even render it inside the chat (MCP Apps).
 
-Go, SQLite, no services, no accounts. macOS today, Windows in preview.
+Go, SQLite, no services, no accounts. macOS today, Windows and Linux in preview.
 
 ```
 ┌───────────┬───────────┬───────────┐
@@ -114,11 +115,12 @@ and a banner offers **Apply to pad** to retry.
 
 ### Requirements
 
-- macOS 12 or newer (Windows: see [Status](#status-and-roadmap))
+- macOS 12 or newer (Windows and Linux: see [Status](#status-and-roadmap); Linux has its own
+  [section](#linux-preview))
 - [Go 1.26](https://go.dev/dl/)
 - Nothing else: the app writes the pad over USB by itself (IOKit on macOS, no driver and no
-  permission). The `macropad` CLI of vibe-coder-keyboard is not needed; `VCK_MACROPAD=macropad`
-  makes the app use it instead.
+  permission; hidraw on Linux, with a udev rule). The `macropad` CLI of vibe-coder-keyboard is not
+  needed; `VCK_MACROPAD=macropad` makes the app use it instead.
 
 ### Download a release
 
@@ -128,7 +130,8 @@ Every version is on the [Releases](https://github.com/nacif-software/vibe-coder-
 |---|---|
 | `Vibe-Coder-Deck-vX.Y.Z-macos.zip` | unzip, drag **Vibe Coder Deck.app** to Applications, open it. The app is not notarized yet: the first time, right-click it and choose **Open** (or allow it under System Settings → Privacy & Security). |
 | `vibe-coder-deck-vX.Y.Z-windows-amd64.zip` | unzip `vibe-coder-deck.exe` anywhere and run it (it lives in the tray). |
-| `checksums.txt` | SHA-256 of both files, what the app checks before it updates itself. |
+| `vibe-coder-deck-vX.Y.Z-linux-amd64.zip` | unzip and follow its `README.md`: the binary goes to `~/.local/bin`, `vibe-coder-deck udev --install` grants device access, the `.desktop` entry puts it in your app menu. See [Linux](#linux-preview). |
+| `checksums.txt` | SHA-256 of every file, what the app checks before it updates itself. |
 
 ### Or build and install it yourself
 
@@ -163,6 +166,41 @@ go build -o vibe-coder-deck .
 ```
 
 The page is served at `http://127.0.0.1:7071` either way.
+
+### Linux (preview)
+
+Everything the pad does works the same on X11 and Wayland, because nothing goes through the
+display server: the app reads the pad's own input device (evdev), grabs it, dispatches
+`ctrl+opt+cmd+1..9` itself and types everything else the pad sends again through a virtual
+keyboard (uinput); macros, media keys and clicks are typed through that same virtual keyboard.
+"Which app is in front" (profile switching) works on X11; under Wayland the Desktop profile stays
+(per-compositor support is planned).
+
+```sh
+unzip vibe-coder-deck-*-linux-amd64.zip -d vibe-coder-deck && cd vibe-coder-deck
+install -Dm755 vibe-coder-deck ~/.local/bin/vibe-coder-deck
+install -Dm644 vibe-coder-deck.desktop ~/.local/share/applications/vibe-coder-deck.desktop
+install -Dm644 vibe-coder-deck.png ~/.local/share/icons/hicolor/256x256/apps/vibe-coder-deck.png
+vibe-coder-deck udev --install      # asks for your password; then unplug and replug the pad
+```
+
+`udev --install` writes `/etc/udev/rules.d/70-vibe-coder-deck.rules` (print it with
+`vibe-coder-deck udev`), which gives the logged-in user the pad's input and hidraw nodes and
+`/dev/uinput` without root. The page's **Permissions** section shows what is still missing and
+its **Allow** buttons install the rule:
+
+| Permission | Needed for |
+|---|---|
+| **Virtual keyboard** (`/dev/uinput`) | typing macros and forwarding the pad's keys |
+| **Read the pad's keys** | the hotkeys: the pad's own input device |
+| **Write the pad** | **Apply to pad** (hidraw) |
+| **Record keystrokes** | the macro recorder reads every keyboard: `sudo usermod -aG input $USER`, then log out and in |
+
+Needs GTK 4.10+ and WebKitGTK 6.0 at run time (`libgtk-4-1`, `libwebkitgtk-6.0-4` on
+Debian/Ubuntu) and a StatusNotifier host for the tray icon (KDE has one; GNOME needs the
+AppIndicator extension). `text` steps type as on a US keyboard; combos by key name work on any
+layout. Updates replace the binary in place. The pad itself has not been tried on a Linux machine
+yet (everything above is verified in a container with a virtual pad): reports welcome.
 
 ## The app
 
@@ -392,6 +430,8 @@ docs/                    design notes and plans
 go vet ./...
 go test ./...                               # 100+ tests, nothing touches the pad, hotkeys or screen
 CGO_ENABLED=0 GOOS=windows go build .       # checks the Windows build
+scripts/docker-linux.sh test                # the Linux port: every test in a container (uinput pad, Xvfb)
+scripts/docker-linux.sh build               # the Linux zip into dist/ (no Linux machine needed)
 scripts/build-app.sh --install              # rebuild and reinstall the macOS app
 curl -X POST http://127.0.0.1:7071/api/app/restart   # restart the running app
 ```
@@ -410,9 +450,9 @@ are the page's own.
 
 1. Write the version's notes in `CHANGELOG.md` under `## [X.Y.Z] - YYYY-MM-DD` and commit.
 2. `scripts/release.sh X.Y.Z` tags `vX.Y.Z` and pushes the tag.
-3. GitHub Actions (`release.yml`, a macOS runner) runs the tests, builds the universal macOS app
-   and the Windows exe, writes `checksums.txt` and publishes the Release with that section as its
-   notes. Installed apps see it within six hours, or at once with **Check for updates**.
+3. GitHub Actions (`release.yml`) runs the tests on Ubuntu and macOS, builds the Linux zip (Ubuntu),
+   the universal macOS app and the Windows exe (macOS), writes `checksums.txt` and publishes the
+   Release with that section as its notes. Installed apps see it within six hours, or at once with **Check for updates**.
 
 To sign the macOS app in the workflow, add two repository secrets: `MACOS_CERT_P12` (the
 certificate and key as a base64 `.p12`: `base64 -i cert.p12 | pbcopy`) and `MACOS_CERT_PASSWORD`.
@@ -426,7 +466,8 @@ Developer ID certificate also satisfies Gatekeeper on other Macs.
 | Keys do nothing | **Accessibility** not granted, or another listener (skhd, a second instance) owns `ctrl+opt+cmd+1..9`. Check the hotkey status in the menu bar menu. |
 | Recorder refuses to start | **Input Monitoring** not granted. Without it macOS shows clicks but no keys. |
 | Permissions asked again after a rebuild | Create the "Vibe Coder Deck Local Signing" certificate in Keychain Access so the signature is stable. |
-| "Pad not connected" | Plug the pad (USB `1189:8890`). Saved keys are applied on the next **Apply to pad**. On Linux the hidraw node of the pad needs a udev rule: `SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1189", ATTRS{idProduct}=="8890", MODE="0666"`. |
+| "Pad not connected" | Plug the pad (USB `1189:8890`). Saved keys are applied on the next **Apply to pad**. On Linux run `vibe-coder-deck udev --install` and replug the pad: its input and hidraw nodes need the rule. |
+| Keys do nothing (Linux) | `/dev/uinput` or the pad's input device is not readable: the **Permissions** section says which; `vibe-coder-deck udev --install`, replug, restart the app. Under Wayland profile switching stays on the Desktop profile. |
 | A screenshot or Spotlight shortcut does not fire | Put it in **Keys** mode: system shortcuts ignore synthetic keystrokes. |
 | A key fires twice or overlaps | Set a cooldown or turn on single instance in **When it runs**. |
 
@@ -436,10 +477,14 @@ Developer ID certificate also satisfies Gatekeeper on other Macs.
 - **Windows:** the tray app, the page, scripts, shell commands and macros (via PowerShell `SendKeys`)
   build and run; the pad is written through its HID interface (not yet tried on a real machine);
   recorded key down / key up steps are not played back yet, and the pad watcher and recorder are stubs.
-- **Linux:** the pad writer (hidraw) builds; the app itself does not run on Linux yet.
+- **Linux (preview):** the app (GTK4 + WebKitGTK), the page, scripts, shell commands, macros, the
+  recorder and the pad writer run; the pad's keys are read from its own device, so X11 and Wayland
+  are alike, and profile switching follows the app in front on X11. Verified in a container with a
+  virtual pad and in CI; not yet on a Linux machine with the real pad.
 - **Updates:** released through GitHub Actions; the app updates itself on both systems (the
   Windows path is built and unit-tested, not yet exercised on a real machine).
-- **Planned:** Developer ID signing and notarization, Windows parity, more MCP App hosts.
+- **Planned:** Developer ID signing and notarization, Windows parity, Wayland "app in front"
+  (GNOME, KDE, wlroots), Linux arm64 builds, more MCP App hosts.
 
 ## Related
 
