@@ -5,15 +5,18 @@ import (
 	"strings"
 )
 
-// PickAsset is the release file for an operating system: the macOS bundle zip
-// ("-macos") or the Windows zip ("-windows").
-func PickAsset(assets []Asset, goos string) (Asset, bool) {
+// PickAsset is the release file for a system: the macOS bundle zip
+// ("-macos"), the Windows zip ("-windows") or the Linux zip for the
+// architecture ("-linux-amd64").
+func PickAsset(assets []Asset, goos, goarch string) (Asset, bool) {
 	var mark string
 	switch goos {
 	case "darwin":
 		mark = "-macos"
 	case "windows":
 		mark = "-windows"
+	case "linux":
+		mark = "-linux-" + goarch
 	default:
 		return Asset{}, false
 	}

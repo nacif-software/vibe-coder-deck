@@ -4,13 +4,13 @@ import "testing"
 
 func TestPickAssetChoosesTheFileForThisOS(t *testing.T) {
 	assets := []Asset{{Name: "checksums.txt"}, {Name: "Vibe-Coder-Deck-v0.2.0-macos.zip"}, {Name: "vibe-coder-deck-v0.2.0-windows-amd64.zip"}}
-	if a, ok := PickAsset(assets, "darwin"); !ok || a.Name != "Vibe-Coder-Deck-v0.2.0-macos.zip" {
+	if a, ok := PickAsset(assets, "darwin", "arm64"); !ok || a.Name != "Vibe-Coder-Deck-v0.2.0-macos.zip" {
 		t.Fatalf("darwin = %+v %v", a, ok)
 	}
-	if a, ok := PickAsset(assets, "windows"); !ok || a.Name != "vibe-coder-deck-v0.2.0-windows-amd64.zip" {
+	if a, ok := PickAsset(assets, "windows", "amd64"); !ok || a.Name != "vibe-coder-deck-v0.2.0-windows-amd64.zip" {
 		t.Fatalf("windows = %+v %v", a, ok)
 	}
-	if _, ok := PickAsset(assets, "linux"); ok {
+	if _, ok := PickAsset(assets, "linux", "amd64"); ok {
 		t.Fatal("linux has no asset")
 	}
 }

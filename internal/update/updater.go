@@ -51,6 +51,7 @@ type Updater struct {
 	Current   string // the running version
 	Target    string // the .app bundle or .exe to replace; "" outside an installed app
 	GOOS      string // runtime.GOOS unless a test says otherwise
+	GOARCH    string // runtime.GOARCH unless a test says otherwise
 	Changelog string // the embedded CHANGELOG.md, the notes when GitHub cannot be reached
 	OnChange  func(Status)
 
@@ -63,7 +64,7 @@ type Updater struct {
 // New makes an updater for the running version and the app it would replace.
 func New(src Source, current, target string) *Updater {
 	return &Updater{
-		Source: src, Current: current, Target: target, GOOS: runtime.GOOS,
+		Source: src, Current: current, Target: target, GOOS: runtime.GOOS, GOARCH: runtime.GOARCH,
 		st: Status{State: StateIdle, Current: current, Release: IsRelease(current), Target: target},
 	}
 }
@@ -140,9 +141,9 @@ func (u *Updater) Download(ctx context.Context) (Status, error) {
 		return st, nil
 	}
 	latest := *st.Latest
-	asset, ok := PickAsset(latest.Assets, u.GOOS)
+	asset, ok := PickAsset(latest.Assets, u.GOOS, u.GOARCH)
 	if !ok {
-		err := fmt.Errorf("release %s has no file for %s", latest.Version, u.GOOS)
+		err := fmt.Errorf("release %s has no file for %s/%s", latest.Version, u.GOOS, u.GOARCH)
 		return u.fail(err), err
 	}
 	var sums Asset

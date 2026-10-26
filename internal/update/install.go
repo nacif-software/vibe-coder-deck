@@ -8,17 +8,24 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
 // TargetFromExecutable is what an update replaces: the .app bundle that holds
-// the running binary on macOS, the .exe on Windows; "" when the program runs
-// outside an installed app (go run, a bare binary).
-func TargetFromExecutable(exe string) string {
+// the running binary on macOS, the .exe on Windows, the binary itself on
+// Linux; "" when the program runs outside an installed app (go run, a bare
+// binary on macOS).
+func TargetFromExecutable(exe string) string { return targetFor(exe, runtime.GOOS) }
+
+func targetFor(exe, goos string) string {
 	if i := strings.Index(exe, ".app/Contents/MacOS/"); i >= 0 {
 		return exe[:i+len(".app")]
 	}
 	if strings.HasSuffix(strings.ToLower(exe), ".exe") {
+		return exe
+	}
+	if goos == "linux" && exe != "" && !strings.Contains(exe, "go-build") {
 		return exe
 	}
 	return ""
@@ -55,11 +62,14 @@ func CleanOld(target string) {
 	}
 }
 
-// findPayload is the .app directory or the .exe file inside an unpacked download.
+// findPayload is the .app directory, the .exe file or (a bare Linux binary)
+// the file named like the target inside an unpacked download.
 func findPayload(dir, target string) (string, error) {
 	wantDir, ext := strings.HasSuffix(strings.ToLower(target), ".app"), ".exe"
 	if wantDir {
 		ext = ".app"
+	} else if !strings.HasSuffix(strings.ToLower(target), ".exe") {
+		ext = filepath.Base(target)
 	}
 	var found string
 	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
@@ -95,6 +105,9 @@ func swap(fresh, target string) error {
 	if err := os.Rename(fresh, target); err != nil {
 		os.Rename(old, target) // put the current app back
 		return fmt.Errorf("moving the new app into place: %w", err)
+	}
+	if info, err := os.Stat(target); err == nil && info.Mode().IsRegular() {
+		os.Chmod(target, 0o755) // a bare binary must stay executable whatever the zip said
 	}
 	os.RemoveAll(old) // a running exe on Windows stays until the next start
 	return nil
