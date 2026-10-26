@@ -77,19 +77,44 @@ type Tracker struct {
 // Feed takes one input and returns the combo when a key (not a modifier),
 // media control or mouse button goes down.
 func (t *Tracker) Feed(in HIDInput) (string, bool) {
+	var name string
+	var ok bool
 	switch in.Page {
 	case pageKeyboard:
-		if mod, ok := modifierUsages[in.Usage]; ok {
-			if t.held == nil {
-				t.held = map[string]bool{}
-			}
-			t.held[mod] = in.Down
-			return "", false
+		if name, ok = modifierUsages[in.Usage]; !ok {
+			name, ok = keyUsages[in.Usage]
 		}
-		name, ok := keyUsages[in.Usage]
-		if !ok || !in.Down {
-			return "", false
+	case pageConsumer:
+		name, ok = consumerUsages[in.Usage]
+	case pageButton:
+		name, ok = buttonUsages[in.Usage]
+	}
+	if !ok {
+		return "", false
+	}
+	return t.FeedKey(name, in.Down)
+}
+
+// FeedKey is Feed for a key given by its pad name ("ctrl", "a", "kp-1",
+// "volume-up", "right-click"); macOS spellings ("[", "return") resolve through
+// aliases. Unknown names are ignored.
+func (t *Tracker) FeedKey(name string, down bool) (string, bool) {
+	name = strings.ToLower(strings.TrimSpace(name))
+	if a, ok := aliases[name]; ok {
+		name = a
+	}
+	if hasName(modifierUsages, name) {
+		if t.held == nil {
+			t.held = map[string]bool{}
 		}
+		t.held[name] = down
+		return "", false
+	}
+	if !down {
+		return "", false
+	}
+	switch {
+	case hasName(keyUsages, name):
 		var parts []string
 		for _, mod := range modifierOrder {
 			if t.held[mod] {
@@ -97,14 +122,20 @@ func (t *Tracker) Feed(in HIDInput) (string, bool) {
 			}
 		}
 		return strings.Join(append(parts, name), "+"), true
-	case pageConsumer:
-		name, ok := consumerUsages[in.Usage]
-		return name, ok && in.Down
-	case pageButton:
-		name, ok := buttonUsages[in.Usage]
-		return name, ok && in.Down
+	case hasName(consumerUsages, name), hasName(buttonUsages, name):
+		return name, true
 	}
 	return "", false
+}
+
+// hasName reports whether a usage table has name as a value.
+func hasName(table map[uint32]string, name string) bool {
+	for _, n := range table {
+		if n == name {
+			return true
+		}
+	}
+	return false
 }
 
 var aliases = map[string]string{

@@ -72,3 +72,39 @@ func TestMatches(t *testing.T) {
 		}
 	}
 }
+
+func TestFeedKeyBuildsCombosFromNames(t *testing.T) {
+	var tr Tracker
+	if c, ok := tr.FeedKey("ctrl", true); ok || c != "" {
+		t.Fatal("modifier down must not report")
+	}
+	tr.FeedKey("opt", true)
+	tr.FeedKey("cmd", true)
+	if c, ok := tr.FeedKey("1", true); !ok || c != "ctrl+opt+cmd+1" {
+		t.Fatalf("got %q %v", c, ok)
+	}
+	if _, ok := tr.FeedKey("1", false); ok {
+		t.Fatal("key up must not report")
+	}
+	tr.FeedKey("ctrl", false)
+	tr.FeedKey("opt", false)
+	tr.FeedKey("cmd", false)
+	tr.FeedKey("shift", true)
+	tr.FeedKey("cmd", true)
+	if c, _ := tr.FeedKey("4", true); c != "shift+cmd+4" {
+		t.Fatalf("got %q", c)
+	}
+	var m Tracker
+	if c, ok := m.FeedKey("volume-up", true); !ok || c != "volume-up" {
+		t.Fatalf("got %q %v", c, ok)
+	}
+	if c, ok := m.FeedKey("right-click", true); !ok || c != "right-click" {
+		t.Fatalf("got %q %v", c, ok)
+	}
+	if c, ok := m.FeedKey("[", true); !ok || c != "lbracket" { // macOS spelling resolves through aliases
+		t.Fatalf("got %q %v", c, ok)
+	}
+	if _, ok := m.FeedKey("no-such-key", true); ok {
+		t.Fatal("unknown names are ignored")
+	}
+}
