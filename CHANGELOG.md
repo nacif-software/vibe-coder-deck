@@ -7,6 +7,16 @@ app under **What's new**.
 
 ## [Unreleased]
 
+### Changed
+- The app writes the pad itself over USB (IOKit on macOS, hidraw on Linux, HID on Windows): the
+  `macropad` CLI of vibe-coder-keyboard is no longer required. `VCK_MACROPAD` still names it to use
+  it instead.
+
+### Fixed
+- Closing the menu no longer flashes scrollbars behind it.
+- What's new shows the newest release and unfolds the rest with **View more**, instead of scrolling
+  inside the menu.
+
 ## [0.1.0] - 2026-10-26
 
 The first release.

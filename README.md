@@ -75,7 +75,7 @@ Go, SQLite, no services, no accounts. macOS today, Windows in preview.
 | **Block editor** | drag and drop steps, fold key down/up pairs, standard delays, text, launch app, media keys |
 | **Profiles** | Desktop plus one or more profiles per app; automatic switching by the app in front |
 | **Guardrails** | per-slot cooldown, single-instance lock, run log with `ok` / `failed` / `skipped` |
-| **Live pad** | detects the pad over USB, lights the key you press on the real pad, applies changes on save |
+| **Live pad** | writes the pad over USB itself (no CLI, no driver), lights the key you press on the real pad, applies changes on save |
 | **Key icons** | built-in drawings, emoji, short text or your own image on every keycap |
 | **Native app** | window (Wails / WKWebView), menu bar icon, Dock presence, start at login, light and dark |
 | **MCP** | 11 tools over HTTP and stdio, one-click install into Claude Code, Claude Desktop, Cursor, Windsurf, Codex |
@@ -116,8 +116,9 @@ and a banner offers **Apply to pad** to retry.
 
 - macOS 12 or newer (Windows: see [Status](#status-and-roadmap))
 - [Go 1.26](https://go.dev/dl/)
-- The `macropad` CLI from [vibe-coder-keyboard](https://github.com/nacif-software/vibe-coder-keyboard)
-  on your `PATH` (or point `VCK_MACROPAD` at it). It is what actually writes the pad.
+- Nothing else: the app writes the pad over USB by itself (IOKit on macOS, no driver and no
+  permission). The `macropad` CLI of vibe-coder-keyboard is not needed; `VCK_MACROPAD=macropad`
+  makes the app use it instead.
 
 ### Download a release
 
@@ -271,7 +272,7 @@ vibe-coder-deck [command] [flags]
                          the app: native window with the page, menu bar icon, hotkeys
   serve [--addr 127.0.0.1:7071] [--db PATH] [--open]
                          the same without the icon, in the terminal
-  sync [--dry-run]       write the configuration into the pad (macropad CLI)
+  sync [--dry-run]       write the configuration into the pad (over USB)
   keys [--json]          list the nine slots
   set <slot> [--mode M] [--label L] [--action A] [--steps JSON] [--app APP]
               [--cooldown N] [--single-instance 0|1]
@@ -369,7 +370,8 @@ internal/deck/           the domain: slots, modes, keys, macros, profiles, SQLit
                          dispatcher, cooldown / single-instance gate, pad sync, key icons
 internal/mcpserver/      MCP tools, the MCP App view (ui/pad.html), client installers
 internal/update/         releases: versions, the GitHub API, the changelog, download, verify, install
-internal/pad/            wrapper around the macropad CLI and USB detection of the pad
+internal/pad/            the pad's USB protocol: action syntax, packets, transports (IOKit,
+                         hidraw, Windows HID), key tables; the macropad CLI as an opt-in fallback
 internal/platform/       OS specifics: global hotkeys, keystroke playback, the recorder,
                          permissions, start at login, Dock, frontmost app, pad watcher
 internal/web/            HTTP + JSON API and the page (static/index.html, app.js, style.css)
@@ -395,8 +397,9 @@ curl -X POST http://127.0.0.1:7071/api/app/restart   # restart the running app
 ```
 
 The tests cover the slot and mode rules, the SQLite store and migrations, the gate, the dispatcher
-(with a fake runner), the macro model, profiles, the pad CLI wrapper, the keystroke builders and
-the JSON API. The MCP tools are tested end to end over the SDK's in-memory transport, including
+(with a fake runner), the macro model, profiles, the pad protocol (packets checked byte for byte
+against the `macropad` tool's dry run in `internal/pad/testdata`), the keystroke builders and the
+JSON API. The MCP tools are tested end to end over the SDK's in-memory transport, including
 the MCP App resource.
 
 The page is plain HTML, CSS and JavaScript embedded in the binary: no build step, no framework.
@@ -423,7 +426,7 @@ Developer ID certificate also satisfies Gatekeeper on other Macs.
 | Keys do nothing | **Accessibility** not granted, or another listener (skhd, a second instance) owns `ctrl+opt+cmd+1..9`. Check the hotkey status in the menu bar menu. |
 | Recorder refuses to start | **Input Monitoring** not granted. Without it macOS shows clicks but no keys. |
 | Permissions asked again after a rebuild | Create the "Vibe Coder Deck Local Signing" certificate in Keychain Access so the signature is stable. |
-| "Pad not connected" | Plug the pad; `macropad status` exits 2 when it is absent. Saved keys are applied on the next **Apply to pad**. |
+| "Pad not connected" | Plug the pad (USB `1189:8890`). Saved keys are applied on the next **Apply to pad**. On Linux the hidraw node of the pad needs a udev rule: `SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1189", ATTRS{idProduct}=="8890", MODE="0666"`. |
 | A screenshot or Spotlight shortcut does not fire | Put it in **Keys** mode: system shortcuts ignore synthetic keystrokes. |
 | A key fires twice or overlaps | Set a cooldown or turn on single instance in **When it runs**. |
 
@@ -431,13 +434,14 @@ Developer ID certificate also satisfies Gatekeeper on other Macs.
 
 - **macOS:** complete and in daily use.
 - **Windows:** the tray app, the page, scripts, shell commands and macros (via PowerShell `SendKeys`)
-  build and run; recorded key down / key up steps are not played back yet, and the pad watcher and
-  recorder are stubs.
+  build and run; the pad is written through its HID interface (not yet tried on a real machine);
+  recorded key down / key up steps are not played back yet, and the pad watcher and recorder are stubs.
+- **Linux:** the pad writer (hidraw) builds; the app itself does not run on Linux yet.
 - **Updates:** released through GitHub Actions; the app updates itself on both systems (the
   Windows path is built and unit-tested, not yet exercised on a real machine).
 - **Planned:** Developer ID signing and notarization, Windows parity, more MCP App hosts.
 
 ## Related
 
-- [vibe-coder-keyboard](https://github.com/nacif-software/vibe-coder-keyboard): the macropad and the
-  `macropad` CLI this app drives.
+- [vibe-coder-keyboard](https://github.com/nacif-software/vibe-coder-keyboard): the macropad this app
+  configures, its USB protocol, and the optional `macropad` CLI.

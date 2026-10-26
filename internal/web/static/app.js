@@ -1298,18 +1298,24 @@
       const out = await api('GET', '/api/releases');
       releasesLoaded = true;
       const cur = vlabel((upd && upd.status.current) || out.current || '');
-      const items = out.releases.map((r) => {
+      const items = out.releases.map((r, i) => {
         const v = vlabel(r.version);
         const mine = cur === v || cur.startsWith(v + '-');
         const date = r.published_at && !r.published_at.startsWith('0001') ? r.published_at.slice(0, 10) : ''; // the day as published, no time zone shift
-        return `<article class="release${mine ? ' current' : ''}">` +
+        return `<article class="release${mine ? ' current' : ''}${i > 0 ? ' more' : ''}">` +
           `<h3>${esc(v)}${mine ? ' <span class="tag">this version</span>' : ''} <small class="muted">${esc(date)}</small></h3>` +
           (md(r.notes) || '<p class="muted">No notes.</p>') +
           (r.url ? `<p><a href="${esc(r.url)}" target="_blank" rel="noopener">Release page</a></p>` : '') +
           '</article>';
       });
+      // Only the newest release shows at first; View more unfolds the rest (the
+      // drawer is the one thing that scrolls).
+      $('release-list').classList.remove('expanded');
       $('release-list').innerHTML = (items.join('') || '<p class="muted">No releases yet.</p>') +
+        (items.length > 1 ? `<button type="button" id="release-more" class="btn btn-outline btn-sm release-more">View ${items.length - 1} more release${items.length > 2 ? 's' : ''}</button>` : '') +
         (out.source === 'changelog' ? '<p class="muted">From the changelog built into the app (GitHub was not reached).</p>' : '');
+      const more = $('release-more');
+      if (more) more.addEventListener('click', () => { $('release-list').classList.add('expanded'); more.remove(); });
     } catch (err) { $('release-list').innerHTML = `<p class="muted">${esc(err.message)}</p>`; }
   }
   $('whats-new').addEventListener('toggle', () => { if ($('whats-new').open) loadReleases(); });

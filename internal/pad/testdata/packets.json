@@ -1,0 +1,443 @@
+{
+ "cases": [
+  {
+   "slot": "key1",
+   "action": "cmd+shift+4",
+   "packets": [
+    "03a101",
+    "03011101000a",
+    "03011101010a21",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key2",
+   "action": "cmd+a, cmd+c",
+   "packets": [
+    "03a101",
+    "030211020008",
+    "03021102010804",
+    "03021102020806",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key3",
+   "action": "ctrl+opt+cmd+3",
+   "packets": [
+    "03a101",
+    "03031101000d",
+    "03031101010d20",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key4",
+   "action": "volume-up",
+   "packets": [
+    "03a101",
+    "030412e9",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key5",
+   "action": "mute",
+   "packets": [
+    "03a101",
+    "030512e2",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key6",
+   "action": "play",
+   "packets": [
+    "03a101",
+    "030612cd",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "knob-left",
+   "action": "volume-down",
+   "packets": [
+    "03a101",
+    "030d12ea",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "knob-press",
+   "action": "scroll-up",
+   "packets": [
+    "03a101",
+    "030e1300000001",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "knob-right",
+   "action": "ctrl+scroll-down",
+   "packets": [
+    "03a101",
+    "030f13000000ff01",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "click",
+   "packets": [
+    "03a101",
+    "03011301",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "right-click",
+   "packets": [
+    "03a101",
+    "03011302",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "middle-click",
+   "packets": [
+    "03a101",
+    "03011304",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "shift+click",
+   "packets": [
+    "03a101",
+    "0301130100000002",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "a",
+   "packets": [
+    "03a101",
+    "03011101",
+    "03011101010004",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "shift+equal",
+   "packets": [
+    "03a101",
+    "030111010002",
+    "0301110101022e",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "alt+tab",
+   "packets": [
+    "03a101",
+    "030111010004",
+    "0301110101042b",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "win+r",
+   "packets": [
+    "03a101",
+    "030111010008",
+    "03011101010815",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "return",
+   "packets": [
+    "03a101",
+    "03011101",
+    "03011101010028",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "f13",
+   "packets": [
+    "03a101",
+    "03011101",
+    "03011101010068",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "kp-5",
+   "packets": [
+    "03a101",
+    "03011101",
+    "0301110101005d",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "0",
+   "packets": [
+    "03a101",
+    "03011101",
+    "03011101010027",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "rshift+rcmd+z",
+   "packets": [
+    "03a101",
+    "0301110100a0",
+    "0301110101a01d",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "h, e, l, l, o",
+   "packets": [
+    "03a101",
+    "03011105",
+    "0301110501000b",
+    "03011105020008",
+    "0301110503000f",
+    "0301110504000f",
+    "03011105050012",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "shift+h, i",
+   "packets": [
+    "03a101",
+    "030111020002",
+    "0301110201020b",
+    "0301110202000c",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "ctrl",
+   "packets": [
+    "03a101",
+    "030111010001",
+    "030111010101",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "cmd+shift+opt+ctrl+a",
+   "packets": [
+    "03a101",
+    "03011101000f",
+    "03011101010f04",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key2",
+   "action": "brightness-up",
+   "packets": [
+    "03a101",
+    "0302126f",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key6",
+   "action": "prev",
+   "packets": [
+    "03a101",
+    "030612b6",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key6",
+   "action": "next",
+   "packets": [
+    "03a101",
+    "030612b5",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key6",
+   "action": "stop",
+   "packets": [
+    "03a101",
+    "030612b7",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "CMD+Shift+4",
+   "packets": [
+    "03a101",
+    "03011101000a",
+    "03011101010a21",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "`",
+   "packets": [
+    "03a101",
+    "03011101",
+    "03011101010035",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "arrow-left",
+   "packets": [
+    "03a101",
+    "03011101",
+    "03011101010050",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "forward-delete",
+   "packets": [
+    "03a101",
+    "03011101",
+    "0301110101004c",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "space",
+   "packets": [
+    "03a101",
+    "03011101",
+    "0301110101002c",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key1",
+   "action": "pgdn",
+   "packets": [
+    "03a101",
+    "03011101",
+    "0301110101004e",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "key3",
+   "action": null,
+   "packets": [
+    "03a101",
+    "03031101",
+    "0303110101",
+    "03aaaa"
+   ]
+  },
+  {
+   "slot": "knob-press",
+   "action": null,
+   "packets": [
+    "03a101",
+    "030e1101",
+    "030e110101",
+    "03aaaa"
+   ]
+  }
+ ],
+ "invalid": [
+  {
+   "action": "",
+   "ok": false,
+   "message": "action is empty",
+   "packets": null
+  },
+  {
+   "action": "cmd+",
+   "ok": false,
+   "message": "empty key name in 'cmd+' ('+' is a separator, use shift+equal)",
+   "packets": null
+  },
+  {
+   "action": "a+b",
+   "ok": false,
+   "message": "only one regular key per step, got ['a', 'b'] in 'a+b'",
+   "packets": null
+  },
+  {
+   "action": "volume-up+shift",
+   "ok": false,
+   "message": "media key 'volume-up' cannot take modifiers",
+   "packets": null
+  },
+  {
+   "action": "cmd+a, volume-up",
+   "ok": false,
+   "message": "media and mouse actions cannot be part of a sequence",
+   "packets": null
+  },
+  {
+   "action": "a, b, c, d, e, f",
+   "ok": false,
+   "message": "sequence has 6 steps; the device plays at most 5",
+   "packets": null
+  },
+  {
+   "action": "delete",
+   "ok": false,
+   "message": "'delete' is ambiguous on macOS; use one of ['backspace', 'forward-delete']",
+   "packets": null
+  },
+  {
+   "action": "foo",
+   "ok": false,
+   "message": "unknown key 'foo'",
+   "packets": null
+  },
+  {
+   "action": "click, a",
+   "ok": false,
+   "message": "media and mouse actions cannot be part of a sequence",
+   "packets": null
+  },
+  {
+   "action": "cmd+shift",
+   "ok": true,
+   "message": "",
+   "packets": [
+    "03a101",
+    "03011101000a",
+    "03011101010a",
+    "03aaaa"
+   ]
+  }
+ ]
+}

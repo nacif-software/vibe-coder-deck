@@ -202,11 +202,13 @@ input[type=checkbox] { width: 16px; height: 16px; padding: 0; accent-color: var(
 @media (prefers-reduced-motion: reduce) { .pressed { animation-duration: .01s; outline: 3px solid var(--ok); } }
 
 .drawer {
-  margin: 0 0 0 auto; height: 100vh; max-height: none; width: min(440px, 92vw); padding: 0; border: none;
+  /* fixed, so that while it slides out (closed but still displayed) it never adds page scrollbars */
+  position: fixed; inset: 0 0 0 auto; margin: 0; height: 100vh; max-height: none; width: min(440px, 92vw); padding: 0; border: none;
   border-left: 1px solid var(--border); background: var(--bg); color: var(--fg); overflow-y: auto;
   transform: translateX(100%); transition: transform .22s ease-out, display .22s allow-discrete, overlay .22s allow-discrete;
 }
 .drawer[open] { transform: none; }
+.drawer:not([open]) { pointer-events: none; }
 @starting-style { .drawer[open] { transform: translateX(100%); } }
 .drawer::backdrop { background: rgb(0 0 0 / .4); }
 @media (prefers-reduced-motion: reduce) { .drawer { transition: none; } }
@@ -373,7 +375,10 @@ input[type=checkbox] { width: 16px; height: 16px; padding: 0; accent-color: var(
 .alert-update { border-color: var(--brand); }
 .alert-update .btn-ghost { margin-left: auto; }
 .updates .row { align-items: center; flex-wrap: wrap; }
-.release-list { max-height: 380px; overflow: auto; padding-right: 4px; }
+.release-list { padding-right: 4px; }
+.release-list .release.more { display: none; }
+.release-list.expanded .release.more { display: block; }
+.release-more { margin-top: 8px; }
 .release { padding: 10px 0; border-top: 1px solid rgba(128, 128, 128, .25); }
 .release:first-child { border-top: 0; }
 .release h3 { margin: 0 0 4px; font-size: 14px; display: flex; gap: 8px; align-items: baseline; }

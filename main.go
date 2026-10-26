@@ -55,7 +55,7 @@ usage: vibe-coder-deck [command] [flags]
                          the app: native window with the page, menu bar icon, hotkeys
   serve [--addr 127.0.0.1:7071] [--db PATH] [--open]
                          the same without the icon, in the terminal
-  sync [--dry-run]       write the configuration into the pad (macropad CLI)
+  sync [--dry-run]       write the configuration into the pad (over USB)
   keys [--json]          list the nine slots
   set <slot> [--mode M] [--label L] [--action A] [--steps JSON] [--app APP]
               [--cooldown N] [--single-instance 0|1]
@@ -133,7 +133,14 @@ func openStore(path string) (*deck.Store, error) {
 	return deck.Open(path)
 }
 
-func padWriter() pad.Writer { return pad.NewCLI(os.Getenv("VCK_MACROPAD")) }
+// padWriter writes the pad over USB. VCK_MACROPAD names the `macropad` CLI
+// of vibe-coder-keyboard to use instead (a path, or "macropad" from PATH).
+func padWriter() pad.Writer {
+	if cli := os.Getenv("VCK_MACROPAD"); cli != "" {
+		return pad.NewCLI(cli)
+	}
+	return pad.NewUSB()
+}
 
 // deckRuntime is the running program: store, dispatcher, page and hotkeys.
 type deckRuntime struct {
