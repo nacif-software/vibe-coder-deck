@@ -1,6 +1,7 @@
 # Builds and publishes a GitHub Release when a version tag (v1.2.3) is pushed:
-# a universal macOS app (zip), a Windows exe (zip) and checksums.txt, with the
-# tag's section of CHANGELOG.md as the notes. The app's updater reads these.
+# a universal macOS app (zip), a Windows exe (zip), a Linux amd64 binary (zip,
+# built on Ubuntu with GTK4/WebKitGTK) and checksums.txt, with the tag's
+# section of CHANGELOG.md as the notes. The app's updater reads these.
 #
 # Signing: with the secrets MACOS_CERT_P12 (a .p12 in base64) and
 # MACOS_CERT_PASSWORD the bundle is signed with that certificate, so macOS
@@ -16,8 +17,39 @@ permissions:
   contents: write
 
 jobs:
+  linux:
+    name: Build Linux
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: GTK4, WebKitGTK and an X server for the tests
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libgtk-4-dev libwebkitgtk-6.0-dev xvfb xauth openbox xdotool dbus-x11 zip
+      - run: go vet ./...
+      - run: go test ./...
+      - name: Build the Linux zip
+        run: scripts/build-linux.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-zip
+          path: dist/*.zip
+          if-no-files-found: error
+      # Last, as root: the pad tests make uinput devices and the window test needs X.
+      - name: Device and window tests
+        run: sudo -E env "PATH=$PATH" "HOME=$HOME" GSK_RENDERER=cairo WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 GTK_A11Y=none dbus-run-session -- xvfb-run -a sh -c 'openbox >/dev/null 2>&1 & exec go test ./internal/platform/ ./internal/app/'
+
   release:
     name: Build and publish
+    needs: linux
     runs-on: macos-latest
     env:
       VERSION: ${{ github.ref_name }}
@@ -58,6 +90,11 @@ jobs:
 
       - name: Build the Windows app
         run: scripts/build-windows.sh
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-zip
+          path: dist
 
       - name: Package
         run: |

@@ -6,6 +6,6 @@ RUN sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.l
     && apt-get -o Acquire::Retries=5 update && apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
     build-essential pkg-config ca-certificates zip \
     libgtk-4-dev libwebkitgtk-6.0-dev \
-    xvfb openbox xdotool x11-utils \
+    xvfb xauth openbox xdotool x11-utils dbus-x11 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /src

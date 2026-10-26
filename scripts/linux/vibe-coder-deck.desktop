@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Vibe Coder Deck
+Comment=Configure and run the vibe-coder-keyboard macropad
+Exec=vibe-coder-deck app
+Icon=vibe-coder-deck
+Terminal=false
+Categories=Utility;
+StartupWMClass=vibe-coder-deck

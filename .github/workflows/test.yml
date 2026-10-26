@@ -1,5 +1,6 @@
-# Runs the tests on pull requests (and by hand). macOS, because the platform
-# code is cgo for darwin; the Windows build is cross-compiled from there.
+# Runs the tests on pull requests (and by hand): on macOS (the platform code
+# is cgo for darwin; the Windows build is cross-compiled from there) and on
+# Linux (GTK4/WebKitGTK, uinput/evdev device tests as root under Xvfb).
 name: Test
 
 on:
@@ -18,3 +19,18 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
       - run: CGO_ENABLED=0 GOOS=windows go build -o /dev/null .
+
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libgtk-4-dev libwebkitgtk-6.0-dev xvfb xauth openbox xdotool dbus-x11
+      - run: go vet ./...
+      - run: go test ./...
+      - run: sudo -E env "PATH=$PATH" "HOME=$HOME" GSK_RENDERER=cairo WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 GTK_A11Y=none dbus-run-session -- xvfb-run -a sh -c 'openbox >/dev/null 2>&1 & exec go test ./internal/platform/ ./internal/app/'

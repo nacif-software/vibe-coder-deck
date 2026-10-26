@@ -152,6 +152,7 @@ func TestInstallReplacesAnExe(t *testing.T) {
 }
 
 func TestTargetFromExecutable(t *testing.T) {
+	// A bare binary is only an installed app on Linux (see TestTargetForLinuxSkipsGoBuildDirs).
 	cases := map[string]string{
 		"/Applications/Vibe Coder Deck.app/Contents/MacOS/vibe-coder-deck": "/Applications/Vibe Coder Deck.app",
 		`C:\Users\me\AppData\Local\vibe-coder-deck.exe`:                    `C:\Users\me\AppData\Local\vibe-coder-deck.exe`,
@@ -159,8 +160,8 @@ func TestTargetFromExecutable(t *testing.T) {
 		"":                                                                 "",
 	}
 	for in, want := range cases {
-		if got := TargetFromExecutable(in); got != want {
-			t.Errorf("TargetFromExecutable(%q) = %q, want %q", in, got, want)
+		if got := targetFor(in, "darwin"); got != want {
+			t.Errorf("targetFor(%q, darwin) = %q, want %q", in, got, want)
 		}
 	}
 }
