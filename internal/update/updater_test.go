@@ -51,6 +51,7 @@ func fakeRelease(t *testing.T, zipPath, checksum string, withChecksums bool) (So
 
 func newUpdater(t *testing.T, current, checksum string, withChecksums bool) (*Updater, string) {
 	t.Helper()
+	t.Setenv("TMPDIR", t.TempDir()) // Download's os.MkdirTemp lands here, not in the real temp dir
 	dir := t.TempDir()
 	app := oldBundle(t, dir)
 	src, _ := fakeRelease(t, bundleZip(t, dir, "new"), checksum, withChecksums)
