@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/nacif-software/vibe-coder-deck/internal/pad"
 )
 
 // RecordedEvent is one key or click the recorder saw, for the macro editor.
@@ -29,25 +31,43 @@ var rec struct {
 
 var clickButtons = map[uint16]string{0x110: "left", 0x111: "right", 0x112: "middle"}
 
+// recordableNodes are the readable keyboards (and, with mouse, devices with
+// mouse buttons) under dir, except the pad's own nodes: the watcher grabs
+// those, so a second reader would see nothing.
+func recordableNodes(dir string, pads []padNode, mouse bool) []string {
+	skip := map[string]bool{}
+	for _, p := range pads {
+		skip[filepath.Base(p.Event)] = true
+	}
+	entries, _ := os.ReadDir(dir)
+	var out []string
+	for _, e := range entries {
+		if !strings.HasPrefix(e.Name(), "event") || skip[e.Name()] {
+			continue
+		}
+		path := filepath.Join(dir, e.Name())
+		r, err := openInput(path)
+		if err != nil {
+			continue
+		}
+		ok := r.HasKey(30) || (mouse && r.HasKey(0x110)) // KEY_A, BTN_LEFT
+		r.Close()
+		if ok {
+			out = append(out, path)
+		}
+	}
+	return out
+}
+
 // StartRecording reads every keyboard (and, with mouse, every device with
 // mouse buttons) without grabbing them. It needs read access to the event
 // nodes: the recording permission.
 func StartRecording(mouse bool) error {
 	StopRecording()
-	entries, _ := os.ReadDir(devInputDir)
 	var readers []*inputReader
-	for _, e := range entries {
-		if !strings.HasPrefix(e.Name(), "event") {
-			continue
-		}
-		r, err := openInput(filepath.Join(devInputDir, e.Name()))
-		if err != nil {
-			continue
-		}
-		if r.HasKey(30) || (mouse && r.HasKey(0x110)) { // KEY_A, BTN_LEFT
+	for _, path := range recordableNodes(devInputDir, padNodes(pad.VendorID, pad.ProductID), mouse) {
+		if r, err := openInput(path); err == nil {
 			readers = append(readers, r)
-		} else {
-			r.Close()
 		}
 	}
 	if len(readers) == 0 {

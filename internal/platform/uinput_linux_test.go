@@ -13,13 +13,24 @@ import (
 	"github.com/nacif-software/vibe-coder-deck/internal/deck"
 )
 
+// requireUinput skips a device test where /dev/uinput cannot be opened,
+// unless VCD_REQUIRE_DEVICES=1 (the Docker runner and CI set it) makes a
+// missing device a failure rather than a silent skip.
 func requireUinput(t *testing.T) {
 	t.Helper()
 	f, err := os.OpenFile("/dev/uinput", os.O_WRONLY, 0)
 	if err != nil {
-		t.Skip("no /dev/uinput:", err)
+		skipOrFail(t, "no /dev/uinput: "+err.Error())
 	}
 	f.Close()
+}
+
+func skipOrFail(t *testing.T, why string) {
+	t.Helper()
+	if os.Getenv("VCD_REQUIRE_DEVICES") == "1" {
+		t.Fatal(why + " (VCD_REQUIRE_DEVICES=1)")
+	}
+	t.Skip(why)
 }
 
 type keyEvent struct {

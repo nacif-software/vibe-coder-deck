@@ -36,7 +36,7 @@ func TestIdentifyMatchesDesktopEntries(t *testing.T) {
 
 func TestFrontmostAppUnderXvfb(t *testing.T) {
 	if os.Getenv("DISPLAY") == "" {
-		t.Skip("no DISPLAY")
+		skipOrFail(t, "no DISPLAY")
 	}
 	conn, err := xgb.NewConn()
 	if err != nil {

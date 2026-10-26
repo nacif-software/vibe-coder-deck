@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/nacif-software/vibe-coder-deck/internal/pad"
 )
@@ -59,37 +58,18 @@ func Permissions() []Permission {
 		{Name: PermAccessibility, Label: "Virtual keyboard (/dev/uinput)", Why: "Types macros and forwards the pad's keys through a virtual keyboard.", Granted: AccessibilityAllowed()},
 		{Name: PermInputMonitoring, Label: "Read the pad's keys", Why: "Reads the pad's own input device, so its hotkeys reach this app on X11 and Wayland alike.", Granted: padInput},
 		{Name: PermPadWrite, Label: "Write the pad", Why: "Writes the key layout to the pad (hidraw) when you apply it.", Granted: hidraw},
-		{Name: PermRecording, Label: "Record keystrokes", Why: "The macro recorder reads every keyboard, which needs membership of the input group.", Granted: anyKeyboardReadable()},
+		{Name: PermRecording, Label: "Record keystrokes", Why: "The macro recorder reads every keyboard (not the pad, which this app holds), which needs membership of the input group.", Granted: len(recordableNodes(devInputDir, nodes, false)) > 0},
 	}
-}
-
-// anyKeyboardReadable is whether at least one keyboard's events can be read.
-func anyKeyboardReadable() bool {
-	entries, _ := os.ReadDir(devInputDir)
-	for _, e := range entries {
-		if !strings.HasPrefix(e.Name(), "event") {
-			continue
-		}
-		r, err := openInput(filepath.Join(devInputDir, e.Name()))
-		if err != nil {
-			continue
-		}
-		ok := r.HasKey(30) // KEY_A
-		r.Close()
-		if ok {
-			return true
-		}
-	}
-	return false
 }
 
 // RequestPermission installs the udev rule for the device permissions and
-// explains the input group for recording.
+// explains the input group for recording. The macOS names the page and
+// main.go use map to the closest thing here.
 func RequestPermission(name string) error {
 	switch name {
-	case PermAccessibility, PermInputMonitoring, PermPadWrite:
+	case PermAccessibility, PermInputMonitoring, PermPadWrite, "accessibility":
 		return InstallUdevRule()
-	case PermRecording:
+	case PermRecording, "input-monitoring":
 		return errors.New("add yourself to the input group: sudo usermod -aG input $USER, then log out and in")
 	}
 	return fmt.Errorf("unknown permission %q", name)

@@ -37,8 +37,10 @@ var padPoll = 2 * time.Second
 func RunMain(f func()) { mainthread.Init(f) }
 
 type padReader struct {
-	r    *inputReader
-	info PadInfo
+	r        *inputReader
+	info     PadInfo
+	keyboard bool // can send the digits: where the hotkeys come from
+	reading  bool // grabbed and read
 }
 
 var padw struct {
@@ -56,6 +58,7 @@ var padw struct {
 		at    time.Time
 	}
 	emitWarned bool
+	grabWarned bool
 }
 
 // WatchPad follows the pad's input devices: each one that can send the
@@ -85,31 +88,50 @@ func scanPad() {
 	for _, node := range padNodes(pad.VendorID, pad.ProductID) {
 		present[node.Event] = true
 		padw.mu.Lock()
-		_, known := padw.nodes[node.Event]
+		pr, known := padw.nodes[node.Event]
 		padw.mu.Unlock()
-		if known {
-			continue
-		}
-		r, err := openInput(node.Event)
-		if err != nil {
-			allOpen = false
-			debuglog.Printf("pad: %s: %v", node.Event, err)
-			continue
-		}
-		info := PadInfo{Product: node.Product, Manufacturer: node.Manufacturer, VendorID: node.Vendor, ProductID: node.ProductID}
-		if info.Product == "" {
-			info.Product = node.Name
-		}
-		log.Printf("pad: %s added (%s, vid %#x pid %#x)", node.Event, node.Name, node.Vendor, node.ProductID)
-		padw.mu.Lock()
-		padw.nodes[node.Event] = &padReader{r: r, info: info}
-		padw.mu.Unlock()
-		if r.HasKey(2) { // KEY_1: a keyboard interface, where the hotkeys come from
-			if err := r.Grab(true); err != nil {
-				log.Printf("pad: %s: cannot grab: %v (its keys will also reach the desktop)", node.Event, err)
+		if !known {
+			r, err := openInput(node.Event)
+			if err != nil {
+				allOpen = false
+				debuglog.Printf("pad: %s: %v", node.Event, err)
+				continue
 			}
-			go readPad(node.Event, r)
+			info := PadInfo{Product: node.Product, Manufacturer: node.Manufacturer, VendorID: node.Vendor, ProductID: node.ProductID}
+			if info.Product == "" {
+				info.Product = node.Name
+			}
+			log.Printf("pad: %s added (%s, vid %#x pid %#x)", node.Event, node.Name, node.Vendor, node.ProductID)
+			pr = &padReader{r: r, info: info, keyboard: r.HasKey(2)} // KEY_1: a keyboard interface, where the hotkeys come from
+			padw.mu.Lock()
+			padw.nodes[node.Event] = pr
+			padw.mu.Unlock()
 		}
+		padw.mu.Lock()
+		grab := pr.keyboard && !pr.reading
+		padw.mu.Unlock()
+		if !grab {
+			continue
+		}
+		// Grabbing without the virtual keyboard would swallow everything the
+		// pad types; wait for /dev/uinput (the udev rule) instead.
+		if _, err := virtualKeyboard(); err != nil {
+			padw.mu.Lock()
+			warned := padw.grabWarned
+			padw.grabWarned = true
+			padw.mu.Unlock()
+			if !warned {
+				log.Printf("pad: not grabbing %s until the virtual keyboard works: %v (run `vibe-coder-deck udev --install`)", node.Event, err)
+			}
+			continue
+		}
+		if err := pr.r.Grab(true); err != nil {
+			log.Printf("pad: %s: cannot grab: %v (its keys will also reach the desktop)", node.Event, err)
+		}
+		padw.mu.Lock()
+		pr.reading = true
+		padw.mu.Unlock()
+		go readPad(node.Event, pr.r)
 	}
 	padw.mu.Lock()
 	for event, pr := range padw.nodes {

@@ -10,7 +10,8 @@ X11 only for now.
 ```sh
 unzip vibe-coder-deck-*-linux-*.zip -d vibe-coder-deck && cd vibe-coder-deck
 install -Dm755 vibe-coder-deck ~/.local/bin/vibe-coder-deck
-install -Dm644 vibe-coder-deck.desktop ~/.local/share/applications/vibe-coder-deck.desktop
+mkdir -p ~/.local/share/applications
+sed "s|^Exec=.*|Exec=$HOME/.local/bin/vibe-coder-deck app|" vibe-coder-deck.desktop > ~/.local/share/applications/vibe-coder-deck.desktop
 install -Dm644 vibe-coder-deck.png ~/.local/share/icons/hicolor/256x256/apps/vibe-coder-deck.png
 ~/.local/bin/vibe-coder-deck udev --install   # asks for your password: device access without root
 ```

@@ -45,7 +45,9 @@ jobs:
           if-no-files-found: error
       # Last, as root: the pad tests make uinput devices and the window test needs X.
       - name: Device and window tests
-        run: sudo -E env "PATH=$PATH" "HOME=$HOME" GSK_RENDERER=cairo WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 GTK_A11Y=none dbus-run-session -- xvfb-run -a sh -c 'openbox >/dev/null 2>&1 & exec go test ./internal/platform/ ./internal/app/'
+        run: |
+          sudo modprobe uinput
+          sudo -E env "PATH=$PATH" "HOME=$HOME" VCD_REQUIRE_DEVICES=1 GSK_RENDERER=cairo WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 GTK_A11Y=none dbus-run-session -- xvfb-run -a sh -c 'openbox >/dev/null 2>&1 & exec go test ./internal/platform/ ./internal/app/'
 
   release:
     name: Build and publish

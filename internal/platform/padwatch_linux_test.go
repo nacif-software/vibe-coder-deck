@@ -4,6 +4,8 @@ package platform
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -11,7 +13,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func fakePad(t *testing.T) *uinputDevice {
+func fakePad(t *testing.T) *uinputDevice { return fakePadAt(t, uinputPath) }
+
+// fakePadAt makes the fake pad through a given uinput node, so a test can
+// hide uinputPath from the code under test while still having a pad.
+func fakePadAt(t *testing.T, uinput string) *uinputDevice {
 	t.Helper()
 	keys := []uint16{29, 56, 125, 42}
 	for c := uint16(2); c <= 11; c++ {
@@ -22,7 +28,7 @@ func fakePad(t *testing.T) *uinputDevice {
 		keys = append(keys, c)
 	}
 	keys = append(keys, 115) // volume-up
-	d, err := newUinputDevice("Macro Keyboard", unix.BUS_USB, 0x1189, 0x8890, keys)
+	d, err := newUinputDeviceAt(uinput, "Macro Keyboard", unix.BUS_USB, 0x1189, 0x8890, keys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,4 +141,68 @@ func TestWatcher(t *testing.T) {
 		}
 	})
 	pad.Close()
+}
+
+// TestWatcherGrabsOnlyWhenItCanForward covers the onboarding path: the app
+// starts before the udev rule exists (no /dev/uinput), the rule is installed
+// while it runs. Until then the pad must not be grabbed (its keys would
+// vanish); afterwards Listen succeeds and the pad is grabbed.
+func TestWatcherGrabsOnlyWhenItCanForward(t *testing.T) {
+	requireUinput(t)
+	padPoll = 200 * time.Millisecond
+	vk.mu.Lock()
+	saved := vk.dev
+	vk.dev = nil
+	vk.mu.Unlock()
+	oldPath := uinputPath
+	uinputPath = filepath.Join(t.TempDir(), "missing-uinput")
+	t.Cleanup(func() {
+		uinputPath = oldPath
+		vk.mu.Lock()
+		if vk.dev != nil && vk.dev != saved {
+			vk.dev.Close()
+		}
+		vk.dev = saved
+		vk.mu.Unlock()
+	})
+	pad := fakePadAt(t, "/dev/uinput")
+	defer pad.Close()
+
+	if _, err := Listen(func(int, bool) {}); err == nil || !strings.Contains(err.Error(), "udev --install") {
+		t.Fatalf("Listen without uinput: %v", err)
+	}
+	waitPad(t, true)
+	time.Sleep(3 * padPoll)
+	path, ok := findInputByName("Macro Keyboard")
+	if !ok {
+		t.Fatal("fake pad not in sysfs")
+	}
+	second, err := openInput(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer second.Close()
+	seen := make(chan keyEvent, 16)
+	go second.Read(func(ev inputEvent) {
+		if ev.Type == unix.EV_KEY {
+			seen <- keyEvent{ev.Code, ev.Value}
+		}
+	})
+	time.Sleep(100 * time.Millisecond)
+	emitAll(t, pad, keyEvent{30, 1}, keyEvent{30, 0})
+	expectEvents(t, seen, []keyEvent{{30, 1}, {30, 0}}) // not grabbed: a second reader still sees the pad
+
+	uinputPath = oldPath // the rule is installed
+	stop, err := Listen(func(int, bool) {})
+	if err != nil {
+		t.Fatalf("Listen with uinput back: %v", err)
+	}
+	defer stop()
+	time.Sleep(3 * padPoll)
+	emitAll(t, pad, keyEvent{30, 1}, keyEvent{30, 0})
+	select {
+	case ev := <-seen:
+		t.Fatalf("still not grabbed after uinput came back: %+v", ev)
+	case <-time.After(500 * time.Millisecond):
+	}
 }

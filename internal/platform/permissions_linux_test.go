@@ -70,3 +70,15 @@ func TestRequestRecordingExplainsTheInputGroup(t *testing.T) {
 		t.Fatal("unknown permission must fail")
 	}
 }
+
+// The page's recorder button asks for "input-monitoring" and main.go for
+// "accessibility" (the macOS names): they must mean something here.
+func TestRequestPermissionAcceptsTheMacOSNames(t *testing.T) {
+	err := RequestPermission("input-monitoring")
+	if err == nil || !strings.Contains(err.Error(), "usermod -aG input") {
+		t.Fatalf("input-monitoring → recording: %v", err)
+	}
+	if err := RequestPermission("accessibility"); err != nil && !strings.Contains(err.Error(), "udev") {
+		t.Fatalf("accessibility → udev rule: %v", err)
+	}
+}

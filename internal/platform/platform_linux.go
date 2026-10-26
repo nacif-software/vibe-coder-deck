@@ -165,16 +165,105 @@ func (Runner) PlayMacro(ctx context.Context, steps []deck.Step) (int, string, er
 	return 0, "", nil
 }
 
-// launch starts an executable by path, or opens a file, URL or app name
-// with xdg-open.
+// launch starts what a "launch" step names: an installed app (by name, id
+// or .desktop file), an executable (by path or name), or a file or URL
+// through xdg-open.
 func launch(target string) error {
-	if info, err := os.Stat(target); err == nil && !info.IsDir() && info.Mode()&0o111 != 0 {
-		return exec.Command(target).Start()
+	args, err := launchArgs(target, installedEntries())
+	if err != nil {
+		return err
 	}
-	if out, err := exec.Command("xdg-open", target).CombinedOutput(); err != nil {
-		return fmt.Errorf("xdg-open %s: %s", target, strings.TrimSpace(string(out)))
+	cmd := exec.Command(args[0], args[1:]...)
+	if args[0] == "xdg-open" {
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("xdg-open %s: %s", target, strings.TrimSpace(string(out)))
+		}
+		return nil
 	}
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("start %s: %w", args[0], err)
+	}
+	go cmd.Wait() // reap it; the app outlives the step
 	return nil
+}
+
+// launchArgs is the command line for a launch target: a .desktop file's Exec
+// (field codes dropped), an installed app matched by name or id, an
+// executable by path or name, else xdg-open for files and URLs. A bare name
+// that matches nothing is an error, not a document to open.
+func launchArgs(target string, entries []desktopEntry) ([]string, error) {
+	target = strings.TrimSpace(target)
+	if strings.HasSuffix(target, ".desktop") {
+		r, err := os.Open(target)
+		if err != nil {
+			return nil, err
+		}
+		defer r.Close()
+		e, ok := parseDesktopEntry(target, r)
+		if !ok || e.Exec == "" {
+			return nil, fmt.Errorf("%s is not a launchable application entry", target)
+		}
+		return execArgs(e.Exec)
+	}
+	if !strings.ContainsAny(target, "/:") {
+		for _, e := range entries {
+			if strings.EqualFold(e.Name, target) || strings.EqualFold(e.ID, target) {
+				return execArgs(e.Exec)
+			}
+		}
+		if path, err := exec.LookPath(target); err == nil {
+			return []string{path}, nil
+		}
+		return nil, fmt.Errorf("no application or command named %q", target)
+	}
+	if info, err := os.Stat(target); err == nil && !info.IsDir() && info.Mode()&0o111 != 0 {
+		return []string{target}, nil
+	}
+	return []string{"xdg-open", target}, nil
+}
+
+// execArgs splits a .desktop Exec line (double quotes group, backslash
+// escapes inside them) and drops its field codes (%f, %U, …).
+func execArgs(line string) ([]string, error) {
+	var args []string
+	var cur strings.Builder
+	inQuote, inToken := false, false
+	flush := func() {
+		if inToken {
+			args = append(args, cur.String())
+			cur.Reset()
+			inToken = false
+		}
+	}
+	for i := 0; i < len(line); i++ {
+		c := line[i]
+		switch {
+		case inQuote && c == '\\' && i+1 < len(line):
+			i++
+			cur.WriteByte(line[i])
+		case c == '"':
+			inQuote = !inQuote
+			inToken = true
+		case !inQuote && (c == ' ' || c == '\t'):
+			flush()
+		case !inQuote && c == '%' && i+1 < len(line):
+			i++
+			if line[i] == '%' {
+				cur.WriteByte('%')
+				inToken = true
+			} else if cur.Len() == 0 {
+				inToken = false // a bare field code: drop the token
+			}
+		default:
+			cur.WriteByte(c)
+			inToken = true
+		}
+	}
+	flush()
+	if len(args) == 0 {
+		return nil, fmt.Errorf("empty Exec line %q", line)
+	}
+	return args, nil
 }
 
 // Notify shows a desktop notification through notify-send; failures are

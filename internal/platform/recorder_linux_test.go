@@ -3,6 +3,8 @@
 package platform
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -76,4 +78,38 @@ func TestRecorderCapturesKeysAndClicks(t *testing.T) {
 		t.Fatalf("got %s", got)
 	}
 	StopRecording()
+}
+
+// TestRecordableNodesSkipThePad: the pad's own node is readable (udev rule)
+// but grabbed by the watcher, so recording from it yields nothing; it must
+// not count as a keyboard for the recorder or the recording permission.
+func TestRecordableNodesSkipThePad(t *testing.T) {
+	requireUinput(t)
+	if _, err := virtualKeyboard(); err != nil {
+		t.Fatal(err)
+	}
+	kbd, ok := findInputByName("Vibe Coder Deck")
+	if !ok {
+		t.Fatal("no virtual keyboard")
+	}
+	pad := fakePad(t)
+	defer pad.Close()
+	var padPath string
+	for i := 0; i < 50 && padPath == ""; i++ {
+		padPath, _ = findInputByName("Macro Keyboard")
+		time.Sleep(100 * time.Millisecond)
+	}
+	if padPath == "" {
+		t.Fatal("fake pad not in sysfs")
+	}
+	dir := t.TempDir()
+	os.Symlink(kbd, filepath.Join(dir, filepath.Base(kbd)))
+	os.Symlink(padPath, filepath.Join(dir, filepath.Base(padPath)))
+	got := recordableNodes(dir, []padNode{{Event: padPath}}, true)
+	if len(got) != 1 || filepath.Base(got[0]) != filepath.Base(kbd) {
+		t.Fatalf("recordable nodes with the pad excluded: %v", got)
+	}
+	if got := recordableNodes(dir, nil, true); len(got) != 2 {
+		t.Fatalf("without the exclusion both are keyboards: %v", got)
+	}
 }

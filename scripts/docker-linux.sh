@@ -26,7 +26,7 @@ run() {
   docker run --rm $tty --privileged -v /dev:/dev -v "$PWD":/src -w /src \
     -v vcd-go-cache:/root/.cache -v vcd-go-mod:/go/pkg/mod \
     -e VERSION="$VERSION" -e GSK_RENDERER=cairo -e WEBKIT_DISABLE_DMABUF_RENDERER=1 \
-    -e WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 -e GTK_A11Y=none \
+    -e WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 -e GTK_A11Y=none -e VCD_REQUIRE_DEVICES=1 \
     "$IMAGE" "$@"
 }
 case "${1:-}" in

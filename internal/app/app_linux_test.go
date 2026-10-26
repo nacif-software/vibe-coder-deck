@@ -14,6 +14,8 @@ import (
 	"github.com/nacif-software/vibe-coder-deck/internal/update"
 )
 
+func hasCommand(name string) bool { _, err := exec.LookPath(name); return err == nil }
+
 type stubDeck struct{}
 
 func (stubDeck) Handler() http.Handler {
@@ -53,11 +55,13 @@ func TestMain(m *testing.M) {
 // TestRunOpensAWindowOnX11 starts the desktop app (GTK4 + WebKitGTK) under
 // an X server and looks for its window with xdotool.
 func TestRunOpensAWindowOnX11(t *testing.T) {
-	if os.Getenv("DISPLAY") == "" {
-		t.Skip("no DISPLAY")
-	}
-	if _, err := exec.LookPath("xdotool"); err != nil {
-		t.Skip("no xdotool")
+	for what, missing := range map[string]bool{"no DISPLAY": os.Getenv("DISPLAY") == "", "no xdotool": !hasCommand("xdotool")} {
+		if missing {
+			if os.Getenv("VCD_REQUIRE_DEVICES") == "1" {
+				t.Fatal(what + " (VCD_REQUIRE_DEVICES=1)")
+			}
+			t.Skip(what)
+		}
 	}
 	child := exec.Command(os.Args[0], "-test.run=^$")
 	child.Env = append(os.Environ(), "VCD_APP_SMOKE=1")

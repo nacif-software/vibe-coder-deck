@@ -43,7 +43,11 @@ type uinputDevice struct {
 // the three mouse buttons and relative motion, so compositors take it as a
 // keyboard and a mouse) and waits a moment for the system to pick it up.
 func newUinputDevice(name string, bus, vendor, product uint16, keys []uint16) (*uinputDevice, error) {
-	f, err := os.OpenFile(uinputPath, os.O_WRONLY|unix.O_NONBLOCK, 0)
+	return newUinputDeviceAt(uinputPath, name, bus, vendor, product, keys)
+}
+
+func newUinputDeviceAt(path, name string, bus, vendor, product uint16, keys []uint16) (*uinputDevice, error) {
+	f, err := os.OpenFile(path, os.O_WRONLY|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -100,21 +104,29 @@ func (d *uinputDevice) Close() error {
 }
 
 var vk struct {
-	once sync.Once
-	dev  *uinputDevice
-	err  error
+	mu  sync.Mutex
+	dev *uinputDevice
 }
 
-// virtualKeyboard is the device this program types with, created once.
+// virtualKeyboard is the device this program types with, created on first
+// use. A failure (no access to /dev/uinput yet) is not remembered: the next
+// call tries again, so granting access while the app runs is enough.
 func virtualKeyboard() (*uinputDevice, error) {
-	vk.once.Do(func() {
-		keys := make([]uint16, 0, len(keyCodeNames))
-		for code := range keyCodeNames {
-			keys = append(keys, code)
-		}
-		vk.dev, vk.err = newUinputDevice("Vibe Coder Deck", unix.BUS_VIRTUAL, 1, 1, keys)
-	})
-	return vk.dev, vk.err
+	vk.mu.Lock()
+	defer vk.mu.Unlock()
+	if vk.dev != nil {
+		return vk.dev, nil
+	}
+	keys := make([]uint16, 0, len(keyCodeNames))
+	for code := range keyCodeNames {
+		keys = append(keys, code)
+	}
+	dev, err := newUinputDevice("Vibe Coder Deck", unix.BUS_VIRTUAL, 1, 1, keys)
+	if err != nil {
+		return nil, err
+	}
+	vk.dev = dev
+	return dev, nil
 }
 
 // AccessibilityAllowed is whether this program may type: /dev/uinput opens.
