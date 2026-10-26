@@ -1,0 +1,6 @@
+/vibe-coder-deck
+/dist/
+*.db
+*.db-journal
+.DS_Store
+HANDOFF.md

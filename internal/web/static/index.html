@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vibe Coder Deck</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <h1 class="title">VIBE CODER KEYBOARD</h1>
+  <nav class="views" role="tablist" aria-label="Views">
+    <button type="button" class="view-tab active" data-view="devices" role="tab">Devices</button>
+    <button type="button" class="view-tab" data-view="profiles" role="tab">Profiles</button>
+  </nav>
+  <div id="pad-status" class="pad-status"><span class="dot"></span><span id="pad-status-text">Looking for the pad…</span></div>
+  <div class="heading-actions">
+    <label class="profile-pick" title="The profile you are editing; ● is the one in use now">
+      <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 9h6M7 13h4"/></svg>
+      <select id="profile-select" aria-label="Profile you are editing"></select>
+    </label>
+    <button id="theme" class="btn btn-ghost btn-square" type="button" aria-label="Switch to light mode" title="Light / dark"><span class="theme-sun"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span><span class="theme-moon"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></span></button>
+    <button id="menu" class="btn btn-ghost btn-square" type="button" aria-label="Menu" aria-controls="drawer" aria-expanded="false" title="Menu"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  </div>
+</header>
+
+<div class="banners">
+  <div id="perm-banner" class="alert alert-warn hidden">
+    <div class="perm-body">
+      <strong>macOS has not allowed Vibe Coder Deck yet.</strong>
+      <div id="perm-list" class="perm-list"></div>
+      <small class="muted">Allow opens macOS's prompt and the page in System Settings where you turn it on. This goes away by itself once it is allowed; if it stays, restart the app.</small>
+      <div><button class="btn btn-outline btn-sm restart hidden" type="button">Restart app</button></div>
+    </div>
+  </div>
+  <div id="sync-banner" class="alert hidden">
+    <strong>The pad has not received the last changes</strong> (was it plugged in?).
+    <span id="sync-text" class="muted"></span>
+    <button id="sync-button" class="btn btn-primary btn-sm" type="button">Try again</button>
+  </div>
+</div>
+
+<main class="app" id="view-devices">
+  <aside class="assign" aria-label="Assignments">
+    <div class="assign-head">
+      <span class="eyebrow">Assignments</span>
+      <h2 id="target-name">Key 1</h2>
+      <div class="target-row">
+        <div class="field icon-field">
+          <button id="icon-button" class="icon-button" type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="Icon on the key" title="Icon printed on the key"></button>
+          <div id="icon-picker" class="icon-picker hidden" role="dialog" aria-label="Choose an icon">
+            <div id="icon-grid" class="icon-grid" role="listbox" aria-label="Built-in icons"></div>
+            <div class="icon-row">
+              <input id="icon-text" maxlength="4" placeholder="Emoji or text" aria-label="Emoji or up to 4 characters">
+              <button id="icon-text-use" class="btn btn-outline btn-sm" type="button">Use</button>
+            </div>
+            <div class="icon-row">
+              <label class="btn btn-outline btn-sm upload">Upload image…<input id="icon-file" type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" hidden></label>
+              <button id="icon-none" class="btn btn-outline btn-sm" type="button">No icon</button>
+            </div>
+            <small id="icon-error" class="error hidden"></small>
+          </div>
+        </div>
+        <input id="label" class="label-input" maxlength="60" placeholder="Label on the key" aria-label="Label on the key">
+      </div>
+      <div id="current" class="current"></div>
+    </div>
+
+    <nav class="assign-tabs" role="tablist">
+      <button type="button" class="atab" data-atab="macros" role="tab">Macros</button>
+      <button type="button" class="atab" data-atab="keys" role="tab">Keys</button>
+      <button type="button" class="atab" data-atab="commands" role="tab">Commands</button>
+      <button type="button" class="atab" data-atab="system" role="tab">System</button>
+      <button type="button" class="atab" data-atab="rules" role="tab" id="atab-rules">Options</button>
+    </nav>
+
+    <section class="apanel" data-apanel="macros">
+      <p class="hint">Pick a macro to assign it to <b class="target-ref">Key 1</b>. The pad sends a hotkey and this app plays it.</p>
+      <label class="search"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="macro-search" placeholder="Search for a macro" aria-label="Search for a macro"></label>
+      <button id="macro-new" class="btn btn-block" type="button">Create new macro</button>
+      <div id="macro-list" class="macro-list" role="list"></div>
+    </section>
+
+    <section class="apanel hidden" data-apanel="keys">
+      <p class="hint">The pad itself types this shortcut: the only kind that works for system shortcuts such as screenshots or Spotlight.</p>
+      <label class="field"><span>Shortcut</span><input id="keys-action" placeholder="cmd+shift+4  ·  cmd+a, cmd+c  ·  f5"></label>
+      <div class="chips" id="keys-examples"></div>
+      <button id="keys-assign" class="btn btn-primary btn-block" type="button">Assign</button>
+    </section>
+
+    <section class="apanel hidden" data-apanel="commands">
+      <p class="hint">This computer runs a script file or a shell command when the key is pressed.</p>
+      <div class="segmented" role="radiogroup" aria-label="Command type">
+        <button type="button" class="seg" data-cmd="script" role="radio">Script file</button>
+        <button type="button" class="seg" data-cmd="shell" role="radio">Shell command</button>
+      </div>
+      <label class="field"><span id="cmd-label">Script file</span><input id="cmd-action" placeholder="/Users/you/scripts/handoff.sh"></label>
+      <small id="cmd-hint" class="muted"></small>
+      <button id="cmd-assign" class="btn btn-primary btn-block" type="button">Assign</button>
+    </section>
+
+    <section class="apanel hidden" data-apanel="system">
+      <p class="hint">Media and system keys the pad sends itself.</p>
+      <div id="system-grid" class="system-grid"></div>
+    </section>
+
+    <section class="apanel hidden" data-apanel="rules">
+      <p class="hint">For macros and commands. Which app it works in is the profile's job: see Profiles.</p>
+      <label class="field"><span>Cooldown (seconds)</span><input id="cooldown" type="number" min="0" value="0"></label>
+      <label class="check"><input id="single_instance" type="checkbox" checked> Ignore presses while it is still running</label>
+      <div id="last-run" class="muted"></div>
+    </section>
+
+    <footer class="assign-foot">
+      <span id="status" class="status muted" role="status"></span>
+      <button id="unassign" class="btn btn-outline btn-danger btn-sm" type="button" title="Turn this control off"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M9 7V4h6v3"/></svg> Unassign</button>
+    </footer>
+  </aside>
+
+  <section class="stage" aria-label="The pad">
+    <svg id="callout-lines" class="callout-lines" aria-hidden="true"></svg>
+    <div id="callouts" class="callouts"></div>
+    <div id="device" class="device" aria-label="The vibe-coder-keyboard: six keys and a knob">
+      <span class="cable" aria-hidden="true"></span>
+      <span class="screw tl" aria-hidden="true"></span><span class="screw tr" aria-hidden="true"></span>
+      <span class="screw bl" aria-hidden="true"></span><span class="screw br" aria-hidden="true"></span>
+      <div id="key-grid" class="key-grid"></div>
+      <div id="knob-area" class="knob-area"></div>
+      <div class="brand" aria-hidden="true"><span class="brand-top">NACIF</span><span class="brand-script">VibeCoder</span></div>
+    </div>
+    <p class="stage-hint muted">Click a key, a knob turn or the knob, or press it on the pad.</p>
+  </section>
+</main>
+
+<main class="profiles-view hidden" id="view-profiles">
+  <aside class="pv-side">
+    <nav class="pv-filters" aria-label="Filter apps">
+      <button type="button" class="pv-filter active" data-filter="all">All <span id="count-all"></span></button>
+      <button type="button" class="pv-filter" data-filter="active">Active <span id="count-active"></span></button>
+      <button type="button" class="pv-filter" data-filter="disabled">Disabled <span id="count-disabled"></span></button>
+    </nav>
+    <div class="pv-switching">
+      <h2>Profile switching</h2>
+      <p class="muted">On: the app in front picks its profile (the Desktop's when it has none), and the pad sends hotkeys only. Off: the persistent profile is used everywhere.</p>
+      <label class="check"><input id="switching" type="checkbox"> Enable profile switching</label>
+      <label class="field"><span>Select persistent profile</span><select id="persistent-select"></select></label>
+    </div>
+  </aside>
+  <section class="pv-main">
+    <h2 class="pv-title">All Apps</h2>
+    <p class="muted pv-intro">Select an app to manage its profiles. Disabling an app keeps its profiles from becoming active; removing it deletes its profiles.</p>
+    <div class="pv-tools">
+      <label class="search pv-search"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg><input id="app-search" placeholder="Search" aria-label="Search apps"></label>
+      <button id="add-apps" class="btn btn-primary pv-add" type="button">+ Add apps</button>
+    </div>
+    <div id="app-cards" class="app-cards"></div>
+    <div id="app-detail" class="app-detail hidden"></div>
+  </section>
+</main>
+
+<!-- The page's own confirm / prompt / message: the app's webview has none. -->
+<dialog id="ui-dialog" class="modal ui-dialog" aria-labelledby="ui-dialog-title">
+  <form method="dialog" id="ui-dialog-form">
+    <h2 id="ui-dialog-title" class="ui-dialog-title"></h2>
+    <p id="ui-dialog-message" class="ui-dialog-message"></p>
+    <input id="ui-dialog-input" class="hidden" maxlength="60" aria-labelledby="ui-dialog-title">
+    <div class="modal-foot">
+      <button id="ui-dialog-cancel" class="btn btn-ghost" type="button">Cancel</button>
+      <button id="ui-dialog-ok" class="btn btn-primary" type="submit">OK</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="add-apps-dialog" class="modal" aria-label="Add apps">
+  <h2 class="modal-title">Add apps</h2>
+  <div class="modal-tools">
+    <button id="browse-app" class="btn btn-ghost" type="button">📁 Browse…</button>
+    <label class="search"><input id="installed-search" placeholder="Search installed apps" aria-label="Search installed apps"></label>
+  </div>
+  <div id="installed-list" class="installed-list" role="list"></div>
+  <div class="modal-foot">
+    <span id="add-apps-error" class="error"></span>
+    <button id="add-apps-cancel" class="btn btn-ghost" type="button">Cancel</button>
+    <button id="add-apps-ok" class="btn btn-primary" type="button">Add</button>
+  </div>
+</dialog>
+
+<!-- Macro editor: full window, like G HUB. Name → type → editor. -->
+<section id="macro-editor" class="macro-editor hidden" aria-label="Macro editor">
+  <button id="me-back" class="me-back btn-ghost" type="button" aria-label="Back"><svg aria-hidden="true" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H4M10 6l-6 6 6 6"/></svg></button>
+
+  <div id="me-name-step" class="me-center hidden">
+    <input id="me-name-input" class="me-name-input" maxlength="60" placeholder="Name this macro" aria-label="Name this macro">
+    <p id="me-name-hint" class="me-caps hidden">Press Enter to create this macro</p>
+  </div>
+
+  <div id="me-type-step" class="me-center hidden">
+    <h2 id="me-type-title" class="me-title"></h2>
+    <p class="me-caps">Select a type of macro you want to create</p>
+    <div id="me-type-cards" class="me-type-cards"></div>
+  </div>
+
+  <div id="me-edit-step" class="me-edit hidden">
+    <div class="me-top">
+      <div class="me-left">
+        <input id="me-title" class="me-title-input" maxlength="60" aria-label="Macro name">
+        <div class="me-types"><span>Macro types</span><div id="me-type-buttons" class="me-type-buttons" role="radiogroup" aria-label="Macro type"></div></div>
+        <p id="me-type-hint" class="muted"></p>
+      </div>
+      <div class="me-options">
+        <label class="me-opt"><input id="me-std" type="checkbox"> <span class="me-caps">Use standard delays</span> <input id="me-std-ms" type="number" min="0" max="60000" value="50" aria-label="Standard delay in milliseconds"> ms</label>
+        <p id="me-std-hint" class="muted"></p>
+        <label class="me-opt"><input id="me-updown" type="checkbox" checked> <span class="me-caps">Show key down / key up</span></label>
+        <label class="me-opt"><input id="me-color" type="color" value="#7c6cf5"> <span class="me-caps">Macro color</span> <button id="me-color-none" class="btn btn-ghost btn-sm" type="button">None</button></label>
+      </div>
+    </div>
+
+    <div id="me-lanes" class="me-lanes"></div>
+
+    <div id="me-recording" class="me-recording hidden" role="status">
+      <span class="rec-dot"></span> <b>Recording</b> — press keys anywhere (Esc stops).
+      <label class="check"><input id="me-rec-mouse" type="checkbox"> Mouse clicks</label>
+      <button id="me-rec-stop" class="btn btn-sm" type="button">Stop</button>
+      <button id="me-rec-allow" class="btn btn-primary btn-sm hidden" type="button">Allow Input Monitoring</button>
+      <span id="me-rec-status" class="muted"></span>
+    </div>
+
+    <div class="me-bottom">
+      <button id="me-delete" class="btn btn-ghost btn-danger hidden" type="button"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M9 7V4h6v3"/></svg> Delete macro</button>
+      <span id="me-error" class="error"></span>
+      <button id="me-reset" class="btn me-wide" type="button">Reset</button>
+      <button id="me-save" class="btn btn-primary me-wide" type="button">Save</button>
+    </div>
+  </div>
+
+  <div id="me-add-menu" class="me-add-menu hidden" role="menu"></div>
+  <div id="me-composer" class="me-composer hidden" role="dialog" aria-label="Add a step"></div>
+  <div id="me-chip-menu" class="me-chip-menu hidden" role="menu"></div>
+</section>
+
+<dialog id="drawer" class="drawer" aria-label="Menu">
+  <div class="drawer-head">
+    <strong>Vibe Coder Deck</strong>
+    <button id="drawer-close" class="btn btn-icon" type="button" aria-label="Close menu" title="Close"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <section class="drawer-section restart-section hidden">
+    <h2>App</h2>
+    <p class="muted">Quit and open the app again, for example after allowing a permission.</p>
+    <button class="btn btn-outline btn-sm restart" type="button">Restart app</button>
+  </section>
+  <section class="drawer-section logs">
+    <div class="logs-head">
+      <h2>Logs</h2>
+      <label class="switch"><input id="debug" type="checkbox"> Debug mode</label>
+    </div>
+    <p class="muted">Debug mode also logs every request the page repeats, each recorder event, every raw keystroke from the pad and every hotkey. It stays on until you turn it off.</p>
+    <pre id="log-view" class="log-view" tabindex="0" aria-label="Last lines of the log"></pre>
+    <div class="row">
+      <button id="log-copy" class="btn btn-outline btn-sm" type="button">Copy</button>
+      <button id="log-open" class="btn btn-outline btn-sm" type="button">Open log file</button>
+      <span id="log-path" class="muted"></span>
+    </div>
+  </section>
+  <section id="mcp" class="drawer-section mcp hidden">
+    <h2>AI setup (MCP)</h2>
+    <p class="muted">Let an AI agent configure the pad: register this app's MCP server with your tools. Tools: list_keys, get_key, set_key, sync_pad, press_key, list_runs, list_macros, set_macro, delete_macro, and show_pad, which shows the pad as an interactive view right in the chat (MCP Apps: Claude, ChatGPT, VS Code and other hosts that support it).</p>
+    <div id="mcp-buttons" class="mcp-buttons"></div>
+    <div id="mcp-result" class="notice hidden"></div>
+    <details>
+      <summary class="muted">Manual config</summary>
+      <pre id="mcp-snippet" class="snippet"></pre>
+    </details>
+  </section>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>

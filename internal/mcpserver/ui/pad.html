@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vibe Coder Deck</title>
+<style>
+  /* Host theme variables (MCP Apps standard names) with our own fallbacks. */
+  :root {
+    color-scheme: light dark;
+    --bg: var(--color-background-primary, light-dark(#ffffff, #18181b));
+    --bg-2: var(--color-background-secondary, light-dark(#f4f4f5, #232326));
+    --fg: var(--color-text-primary, light-dark(#18181b, #f4f4f5));
+    --muted: var(--color-text-secondary, light-dark(#6b7280, #a1a1aa));
+    --border: var(--color-border-primary, light-dark(#e4e4e7, #3f3f46));
+    --danger: var(--color-text-danger, #dc2626);
+    --ok: var(--color-text-success, #16a34a);
+    --font: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+    --accent: #8b7bff;
+  }
+  :root[data-theme="light"] { color-scheme: light; }
+  :root[data-theme="dark"] { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 12px; background: var(--bg); color: var(--fg); font: 13px/1.45 var(--font); }
+  .wrap { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .hidden { display: none !important; }
+
+  /* The pad, drawn like the hardware. */
+  .device {
+    position: relative; display: grid; grid-template-columns: auto 92px; gap: 10px 14px; padding: 20px 18px 18px 20px; border-radius: 14px;
+    background: linear-gradient(160deg, #dcdee3 0%, #bfc2c9 55%, #aeb1b9 100%); border: 1px solid rgba(255, 255, 255, .55);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75), inset 0 -2px 6px rgba(0, 0, 0, .15), 0 8px 20px rgba(0, 0, 0, .2);
+  }
+  .screw { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #f6e9cc, #a48d64 75%); }
+  .screw.tl { top: 7px; left: 7px; } .screw.tr { top: 7px; right: 7px; } .screw.bl { bottom: 7px; left: 7px; } .screw.br { bottom: 7px; right: 7px; }
+  .keys { grid-row: 1 / span 2; display: grid; grid-template-columns: repeat(3, 74px); gap: 9px; padding: 6px; border-radius: 5px; background: rgba(0, 0, 0, .07); }
+  .key { all: unset; box-sizing: border-box; cursor: pointer; width: 74px; height: 74px; border-radius: 8px; padding: 3px 4px 7px; background: linear-gradient(#1c1c1e, #0b0b0c); box-shadow: 0 3px 0 #000, 0 5px 8px rgba(0, 0, 0, .35); }
+  .cap { height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 5px; border-radius: 5px; overflow: hidden; background: linear-gradient(160deg, #2d2d30, #1b1b1d); color: #f4f4f5; }
+  .key:hover .cap { background: linear-gradient(160deg, #38383c, #232326); }
+  .key:focus-visible, .knob:focus-visible, .turn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .key.selected { box-shadow: 0 3px 0 #000, 0 0 0 3px var(--accent); }
+  .cap .name { font-size: 9px; color: #a1a1aa; }
+  .kicon { width: 18px; height: 18px; color: #e4e4e7; object-fit: contain; flex: none; }
+  .ktext { width: auto; height: auto; font-size: 15px; line-height: 18px; }
+  .kicon + .label { white-space: nowrap; text-overflow: ellipsis; display: block; }
+  .cap .label { font-size: 10.5px; font-weight: 600; line-height: 1.15; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; hyphens: auto; overflow-wrap: break-word; }
+  .badge { display: inline-block; width: fit-content; border-radius: 999px; padding: 0 6px; font-size: 9px; background: #3f3f46; color: #f4f4f5; }
+  .badge.off { background: transparent; border: 1px solid #3f3f46; color: #a1a1aa; }
+  .badge.script, .badge.macro, .badge.shell { background: #f4f4f5; color: #111827; }
+  .knobs { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .knob { all: unset; cursor: pointer; position: relative; width: 70px; height: 70px; border-radius: 50%; background: repeating-conic-gradient(#0a0a0b 0 5deg, #2a2a2d 5deg 10deg); box-shadow: 0 6px 10px rgba(0, 0, 0, .4); }
+  .knob::after { content: ''; position: absolute; inset: 6px; border-radius: 50%; border: 2px solid #cfd2d8; background: radial-gradient(circle at 40% 35%, #2e2e31, #0c0c0d 70%); }
+  .knob .mark { position: absolute; z-index: 1; top: 11px; left: calc(50% - 1px); width: 2px; height: 11px; background: #f4f4f5; transform: rotate(-35deg); transform-origin: 50% 24px; }
+  .knob.selected { box-shadow: 0 0 0 3px var(--accent); }
+  .turns { display: flex; gap: 8px; }
+  .turn { all: unset; cursor: pointer; width: 30px; height: 22px; border-radius: 11px; background: rgba(0, 0, 0, .12); color: #27272a; text-align: center; line-height: 22px; }
+  .turn.selected { box-shadow: 0 0 0 2px var(--accent); }
+  .set::before { content: ''; position: absolute; z-index: 2; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: #22c55e; }
+  .turn { position: relative; }
+  .brand { grid-column: 2; align-self: end; display: flex; flex-direction: column; align-items: center; line-height: 1; }
+  .brand b { font-size: 12px; letter-spacing: .04em; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
+  .brand i { font-family: "Snell Roundhand", "Brush Script MT", cursive; font-weight: 700; font-size: 15px; color: #5b5bff; }
+
+  /* The editor for the selected control. */
+  .editor { flex: 1 1 240px; min-width: 240px; display: flex; flex-direction: column; gap: 10px; }
+  .editor h2 { margin: 0; font-size: 14px; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 500; }
+  input, select { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+  input:focus, select:focus { outline: none; box-shadow: 0 0 0 2px var(--accent); }
+  .steps { display: flex; flex-wrap: wrap; gap: 4px; }
+  .step { border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; font-size: 11px; background: var(--bg-2); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .profile-row { margin-bottom: 12px; }
+  .profile-row label { flex-direction: row; align-items: center; gap: 8px; }
+  button.btn { font: inherit; border-radius: 6px; padding: 6px 12px; cursor: pointer; border: 1px solid var(--border); background: var(--bg); color: inherit; }
+  button.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  button.btn:disabled { opacity: .6; cursor: progress; }
+  .status.error { color: var(--danger); }
+  .status.ok { color: var(--ok); }
+</style>
+</head>
+<body>
+<div id="profile-row" class="row profile-row hidden">
+  <label>Profile <select id="profile" aria-label="Profile"></select></label>
+  <span id="profile-note" class="muted"></span>
+</div>
+<div class="wrap">
+  <div class="device" aria-label="The vibe-coder-keyboard">
+    <span class="screw tl"></span><span class="screw tr"></span><span class="screw bl"></span><span class="screw br"></span>
+    <div id="keys" class="keys"></div>
+    <div id="knobs" class="knobs"></div>
+    <div class="brand" aria-hidden="true"><b>NACIF</b><i>VibeCoder</i></div>
+  </div>
+  <form id="editor" class="editor">
+    <h2 id="title">Loading…</h2>
+    <label>Label <input id="label" maxlength="60" placeholder="Handoff"></label>
+    <label>Mode <select id="mode"></select></label>
+    <label id="action-field">Action <input id="action"></label>
+    <div id="steps-field" class="hidden"><div class="muted">Macro steps (edit them in the Vibe Coder Deck app)</div><div id="steps" class="steps"></div></div>
+    <div class="row">
+      <button id="save" class="btn primary" type="submit">Save and write pad</button>
+      <button id="run" class="btn hidden" type="button">Run now</button>
+    </div>
+    <div id="status" class="status muted"></div>
+  </form>
+</div>
+<script>
+(() => {
+  // MCP Apps view: JSON-RPC 2.0 over postMessage with the host (SEP-1865).
+  // The host proxies tools/call to this server, so editing here uses the
+  // same tools the agent has: set_key, sync_pad, press_key, list_keys,
+  // list_profiles (each profile has its own nine controls).
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const keySlots = ['key1', 'key2', 'key3', 'key4', 'key5', 'key6'];
+  // Built-in icon drawings, inlined by the server (the view cannot fetch).
+  const ICONS = /*ICONS*/[];
+  function iconHTML(icon) {
+    if (!icon) return '';
+    if (icon.startsWith('icon:')) {
+      const ic = ICONS.find((i) => i.name === icon.slice(5));
+      return ic ? `<svg class="kicon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic.svg}</svg>` : '';
+    }
+    if (icon.startsWith('data:image/')) return `<img class="kicon" src="${esc(icon)}" alt="">`;
+    return `<span class="kicon ktext">${esc(icon)}</span>`;
+  }
+  const dispatched = { script: true, shell: true, macro: true };
+  const actionLabels = { keys: 'Keys the pad sends (cmd+shift+4, "cmd+a, cmd+c", volume-up)', script: 'Script file on this computer', shell: 'Shell command' };
+
+  let state = null;     // the keys shown, with their profile_id
+  let profiles = null;  // list_profiles, once the host lets the view call tools
+  let selected = 'key1';
+  let nextId = 1;
+  const pending = new Map();
+
+  function request(method, params) {
+    const id = nextId++;
+    window.parent.postMessage({ jsonrpc: '2.0', id, method, params }, '*');
+    return new Promise((resolve, reject) => pending.set(id, { resolve, reject }));
+  }
+  const notify = (method, params) => window.parent.postMessage({ jsonrpc: '2.0', method, params }, '*');
+  const reply = (id, result) => window.parent.postMessage({ jsonrpc: '2.0', id, result }, '*');
+
+  async function callTool(name, args) {
+    const res = await request('tools/call', { name, arguments: args });
+    if (res.isError) throw new Error((res.content || []).map((c) => c.text).join(' ') || `${name} failed`);
+    return res.structuredContent || {};
+  }
+
+  window.addEventListener('message', (e) => {
+    if (e.source !== window.parent) return;
+    const m = e.data;
+    if (!m || m.jsonrpc !== '2.0') return;
+    if (m.id != null && !m.method) {
+      const p = pending.get(m.id);
+      if (!p) return;
+      pending.delete(m.id);
+      if (m.error) p.reject(new Error(m.error.message || 'request failed'));
+      else p.resolve(m.result);
+      return;
+    }
+    switch (m.method) {
+      case 'ui/notifications/tool-result':
+        if (m.params && m.params.structuredContent && m.params.structuredContent.keys) render(m.params.structuredContent);
+        break;
+      case 'ui/notifications/host-context-changed':
+        applyContext(m.params || {});
+        break;
+      case 'ui/resource-teardown':
+      case 'ping':
+        reply(m.id, {});
+        break;
+      default:
+        if (m.id != null) window.parent.postMessage({ jsonrpc: '2.0', id: m.id, error: { code: -32601, message: `unknown method ${m.method}` } }, '*');
+    }
+  });
+
+  function applyContext(ctx) {
+    if (ctx.theme) document.documentElement.dataset.theme = ctx.theme;
+    const vars = (ctx.styles && ctx.styles.variables) || {};
+    for (const [k, v] of Object.entries(vars)) if (v) document.documentElement.style.setProperty(k, v);
+  }
+
+  const bySlot = (slot) => state.keys.find((k) => k.slot === slot);
+  const summary = (k) => k.mode === 'off' ? '' : k.mode === 'macro' ? `${k.steps.length} steps` : (k.action || '');
+  const profileArgs = () => (state && state.profile_id ? { profile_id: state.profile_id } : {});
+
+  // The profile picker: "App: Profile", ● on the one in use.
+  function profileLabel(id) {
+    if (!profiles) return '';
+    for (const app of profiles.apps) for (const p of app.profiles) if (p.id === id) return `${app.name}: ${p.name}`;
+    return '';
+  }
+  function renderProfiles() {
+    if (!profiles) return;
+    const options = [];
+    for (const app of profiles.apps) {
+      for (const p of app.profiles) {
+        const inUse = p.id === profiles.active_profile_id ? ' ●' : '';
+        const off = app.kind === 'app' && !app.enabled ? ' (disabled)' : '';
+        options.push(`<option value="${p.id}">${esc(app.name)}: ${esc(p.name)}${inUse}${off}</option>`);
+      }
+    }
+    $('profile').innerHTML = options.join('');
+    if (state && state.profile_id) $('profile').value = String(state.profile_id);
+    const shown = state ? state.profile_id : 0;
+    $('profile-note').textContent = !profiles.switching ? 'Profile switching is off: this profile is used everywhere.'
+      : shown && shown !== profiles.active_profile_id ? `In use now: ${profileLabel(profiles.active_profile_id)}` : '● in use now';
+    $('profile-row').classList.remove('hidden');
+  }
+  async function loadProfiles() {
+    profiles = await callTool('list_profiles', {});
+    renderProfiles();
+  }
+
+  function render(data) {
+    state = data;
+    if (profiles) renderProfiles();
+    if (!$('mode').options.length) {
+      $('mode').innerHTML = state.modes.map((m) => `<option value="${esc(m.value)}">${esc(m.label)}</option>`).join('');
+    }
+    $('keys').innerHTML = keySlots.map((slot) => {
+      const k = bySlot(slot);
+      return `<button type="button" class="key ${slot === selected ? 'selected' : ''}" data-slot="${slot}" title="${esc(k.name)}: ${esc(summary(k))}">
+        <span class="cap"><span class="name">${esc(k.name)}</span>${iconHTML(k.icon)}<span class="label">${esc(k.label || summary(k))}</span><span class="badge ${esc(k.mode)}">${esc(k.mode)}</span></span>
+      </button>`;
+    }).join('');
+    const knob = (slot, cls, text) => {
+      const k = bySlot(slot);
+      return `<button type="button" class="${cls} ${slot === selected ? 'selected' : ''} ${k.mode === 'off' ? '' : 'set'}" data-slot="${slot}" title="${esc(k.name)}: ${esc(summary(k) || 'off')}">${text}</button>`;
+    };
+    $('knobs').innerHTML = knob('knob-press', 'knob', '<span class="mark"></span>') + `<div class="turns">${knob('knob-left', 'turn', '↺')}${knob('knob-right', 'turn', '↻')}</div>`;
+    loadEditor();
+  }
+
+  function loadEditor() {
+    const k = bySlot(selected);
+    $('title').textContent = k.name;
+    $('label').value = k.label || '';
+    $('mode').value = k.mode;
+    $('action').value = k.action || '';
+    $('steps').innerHTML = k.steps.map((s) => `<span class="step">${esc(s.type)} ${esc(s.value)}</span>`).join('') || '<span class="muted">none</span>';
+    renderMode();
+  }
+
+  function renderMode() {
+    const mode = $('mode').value;
+    $('action-field').classList.toggle('hidden', !actionLabels[mode]);
+    $('action-field').firstChild.textContent = (actionLabels[mode] || 'Action') + ' ';
+    $('steps-field').classList.toggle('hidden', mode !== 'macro');
+    $('run').classList.toggle('hidden', !dispatched[mode] || bySlot(selected).mode !== mode);
+  }
+
+  function status(text, kind) {
+    $('status').textContent = text;
+    $('status').className = `status ${kind || 'muted'}`;
+  }
+
+  document.body.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-slot]');
+    if (!el || !state) return;
+    selected = el.dataset.slot;
+    render(state);
+    status('');
+  });
+  $('mode').addEventListener('change', renderMode);
+  $('profile').addEventListener('change', async () => {
+    status('Loading…');
+    try {
+      render(await callTool('list_keys', { profile_id: Number($('profile').value) }));
+      status('');
+    } catch (err) {
+      status(err.message, 'error');
+    }
+  });
+
+  $('editor').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const args = { ...profileArgs(), slot: selected, label: $('label').value, mode: $('mode').value };
+    if (actionLabels[args.mode]) args.action = $('action').value;
+    $('save').disabled = true;
+    status('Saving…');
+    try {
+      await callTool('set_key', args);
+      let written = true;
+      try { await callTool('sync_pad', {}); } catch (err) { written = false; status(`Saved, but the pad was not written: ${err.message}`, 'error'); }
+      render(await callTool('list_keys', profileArgs()));
+      if (written) status('Saved and written to the pad.', 'ok');
+      const k = bySlot(selected);
+      const where = profileLabel(state.profile_id) ? ` in profile ${profileLabel(state.profile_id)} (${state.profile_id})` : '';
+      // Tell the agent what the user changed here, for its next turn.
+      request('ui/update-model-context', { content: [{ type: 'text', text: `In the pad view the user set ${k.name} (${k.slot})${k.label ? ` "${k.label}"` : ''}${where} to ${k.mode}${summary(k) ? `: ${summary(k)}` : ''}; the pad was ${written ? '' : 'not '}written.` }] }).catch(() => {});
+    } catch (err) {
+      status(err.message, 'error');
+    } finally {
+      $('save').disabled = false;
+    }
+  });
+
+  $('run').addEventListener('click', async () => {
+    $('run').disabled = true;
+    try {
+      const out = await callTool('press_key', { slot: selected });
+      status(out.summary || (out.ran ? 'Ran.' : `Not run: ${out.reason}`), out.ran && out.exit_code === 0 ? 'ok' : 'error');
+      render(await callTool('list_keys', profileArgs()));
+    } catch (err) {
+      status(err.message, 'error');
+    } finally {
+      $('run').disabled = false;
+    }
+  });
+
+  new ResizeObserver(() => {
+    const r = document.documentElement.getBoundingClientRect();
+    notify('ui/notifications/size-changed', { width: Math.ceil(r.width), height: Math.ceil(document.documentElement.scrollHeight) });
+  }).observe(document.documentElement);
+
+  (async () => {
+    try {
+      const init = await request('ui/initialize', {
+        protocolVersion: '2026-01-26',
+        clientInfo: { name: 'vibe-coder-deck-pad', version: '1.0.0' },
+        appCapabilities: { availableDisplayModes: ['inline'] },
+      });
+      applyContext((init && init.hostContext) || {});
+      notify('ui/notifications/initialized', {});
+      // The tool result normally follows; fetch the keys only if it does not come.
+      if (init && init.hostCapabilities && init.hostCapabilities.serverTools) {
+        loadProfiles().catch(() => {});
+        setTimeout(async () => { if (!state) render(await callTool('list_keys', {})); }, 800);
+      }
+    } catch (err) {
+      status(err.message, 'error');
+    }
+  })();
+})();
+</script>
+</body>
+</html>
