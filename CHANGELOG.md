@@ -14,6 +14,13 @@ app under **What's new**.
   front" (profile switching) works on X11. `vibe-coder-deck udev --install` sets up device access.
   Releases carry `vibe-coder-deck-vX.Y.Z-linux-amd64.zip` and the app updates itself in place.
 
+### Fixed
+- Windows: writing the pad failed with "The parameter is incorrect" (error 87) on every packet.
+  The HID class driver only takes a buffer of exactly the collection's output report length that
+  starts with a report ID the descriptor declares; the app now reads that length from the driver,
+  tries every collection of the config interface and both report forms (the packet as report 3,
+  or behind report ID 0), and names the collection and report length when a write still fails.
+
 ## [0.1.1] - 2026-10-26
 
 ### Changed
