@@ -5,7 +5,7 @@ All notable changes to Vibe Coder Deck. The format follows
 GitHub Release, and the section below the version heading is that release's notes, shown in the
 app under **What's new**.
 
-## [Unreleased]
+## [0.1.4] - 2026-10-27
 
 ### Changed
 - Settings left the side drawer: the gear in the header opens a Settings view laid out like
