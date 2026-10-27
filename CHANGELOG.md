@@ -13,6 +13,12 @@ app under **What's new**.
   behalf); before, the app tapped the modifier once on the way down, which no app could use.
   Works on macOS, Linux and Windows; "Run now" still taps it once.
 
+### Changed
+- Releases are signed with the project's own certificate when the repository carries it
+  (`MACOS_CERT_P12`/`MACOS_CERT_PASSWORD`), so macOS keeps the Accessibility and Input Monitoring
+  grants across updates; the first signed build asks for them once more. The self-signed certificate
+  is "not trusted" to macOS, so the workflow no longer filters identities with `-v`.
+
 ## [0.1.2] - 2026-10-27
 
 ### Added
