@@ -5,7 +5,7 @@ All notable changes to Vibe Coder Deck. The format follows
 GitHub Release, and the section below the version heading is that release's notes, shown in the
 app under **What's new**.
 
-## [Unreleased]
+## [0.1.3] - 2026-10-27
 
 ### Fixed
 - A keys-mode slot that is only modifiers ("ropt", "ctrl+shift") now holds them while the pad's key is
