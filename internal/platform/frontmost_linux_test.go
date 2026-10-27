@@ -34,6 +34,11 @@ func TestIdentifyMatchesDesktopEntries(t *testing.T) {
 	}
 }
 
+// TestFrontmostAppUnderXvfb maps a window of its own and expects FrontmostApp
+// to name it. It needs a window manager on DISPLAY (openbox in CI and in the
+// Docker runner) and asks it to activate the window the way a pager does,
+// which window managers honour whatever their focus policy; the first run of
+// the CI job failed because the window was never focused by itself.
 func TestFrontmostAppUnderXvfb(t *testing.T) {
 	if os.Getenv("DISPLAY") == "" {
 		skipOrFail(t, "no DISPLAY")
@@ -44,8 +49,6 @@ func TestFrontmostAppUnderXvfb(t *testing.T) {
 	}
 	defer conn.Close()
 	screen := xproto.Setup(conn).DefaultScreen(conn)
-	wid, _ := xproto.NewWindowId(conn)
-	xproto.CreateWindow(conn, screen.RootDepth, wid, screen.Root, 0, 0, 200, 100, 0, xproto.WindowClassInputOutput, screen.RootVisual, 0, nil)
 	atom := func(name string) xproto.Atom {
 		r, err := xproto.InternAtom(conn, false, uint16(len(name)), name).Reply()
 		if err != nil {
@@ -53,13 +56,35 @@ func TestFrontmostAppUnderXvfb(t *testing.T) {
 		}
 		return r.Atom
 	}
+	// Wait for the window manager: it is started next to the tests.
+	wmCheck := atom("_NET_SUPPORTING_WM_CHECK")
+	for deadline := time.Now().Add(10 * time.Second); ; time.Sleep(100 * time.Millisecond) {
+		r, err := xproto.GetProperty(conn, false, screen.Root, wmCheck, xproto.AtomWindow, 0, 1).Reply()
+		if err == nil && len(r.Value) >= 4 && xgb.Get32(r.Value) != 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			skipOrFail(t, "no window manager on DISPLAY "+os.Getenv("DISPLAY"))
+		}
+	}
+	wid, _ := xproto.NewWindowId(conn)
+	xproto.CreateWindow(conn, screen.RootDepth, wid, screen.Root, 0, 0, 200, 100, 0, xproto.WindowClassInputOutput, screen.RootVisual, 0, nil)
 	class := []byte("vcdtest\x00vcdtest\x00")
 	xproto.ChangeProperty(conn, xproto.PropModeReplace, wid, xproto.AtomWmClass, xproto.AtomString, 8, uint32(len(class)), class)
 	pid := uint32(os.Getpid())
 	xproto.ChangeProperty(conn, xproto.PropModeReplace, wid, atom("_NET_WM_PID"), xproto.AtomCardinal, 32, 1, []byte{byte(pid), byte(pid >> 8), byte(pid >> 16), byte(pid >> 24)})
 	xproto.MapWindow(conn, wid)
 	conn.Sync()
-	for i := 0; i < 30; i++ {
+	activate := func() { // _NET_ACTIVE_WINDOW from a pager (source 2): granted whatever the focus policy
+		ev := xproto.ClientMessageEvent{Format: 32, Window: wid, Type: atom("_NET_ACTIVE_WINDOW"),
+			Data: xproto.ClientMessageDataUnionData32New([]uint32{2, 0, 0, 0, 0})}
+		xproto.SendEvent(conn, false, screen.Root, xproto.EventMaskSubstructureRedirect|xproto.EventMaskSubstructureNotify, string(ev.Bytes()))
+		conn.Sync()
+	}
+	for i := 0; i < 50; i++ {
+		if i%5 == 0 {
+			activate()
+		}
 		id, name, path := FrontmostApp()
 		if id == "vcdtest" {
 			if name != "vcdtest" || path == "" {
