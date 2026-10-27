@@ -5,6 +5,14 @@ All notable changes to Vibe Coder Deck. The format follows
 GitHub Release, and the section below the version heading is that release's notes, shown in the
 app under **What's new**.
 
+## [Unreleased]
+
+### Fixed
+- A keys-mode slot that is only modifiers ("ropt", "ctrl+shift") now holds them while the pad's key is
+  held when profile switching is on (the pad sends a hotkey and the app presses the modifiers on its
+  behalf); before, the app tapped the modifier once on the way down, which no app could use.
+  Works on macOS, Linux and Windows; "Run now" still taps it once.
+
 ## [0.1.2] - 2026-10-27
 
 ### Added

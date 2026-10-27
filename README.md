@@ -209,7 +209,8 @@ The window is a native webview ([Wails v3](https://wails.io): WKWebView on macOS
 Windows). The layout follows Logitech G HUB:
 
 - **Assignments** on the left, for the selected control, with tabs **Macros**, **Keys**,
-  **Commands**, **System** and **When it runs** (cooldown, single instance).
+  **Commands**, **System** and **When it runs** (cooldown, single instance). A **Keys** combo of only
+  modifiers (`ropt`, `ctrl+shift`) is held for as long as the key is held.
 - **The pad** in the middle, drawn as it looks (six keycaps, the knob, the NACIF VibeCoder plate),
   with a status dot on every key and knob part and a line to what it does. A key pressed on the
   real pad lights up in the drawing and opens for editing.

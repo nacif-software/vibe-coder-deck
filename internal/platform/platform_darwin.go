@@ -295,3 +295,32 @@ func (Runner) SendKeys(action string) error {
 	}
 	return nil
 }
+
+// HoldKeys presses or releases the modifiers of a modifier-only action, in
+// combo order going down and in reverse coming up.
+func (Runner) HoldKeys(action string, down bool) error {
+	mods, err := holdModifiers(action)
+	if err != nil {
+		return err
+	}
+	held := map[string]bool{}
+	if down {
+		for _, m := range mods {
+			held[m] = true
+			if err := PostKey(m, true, ModifierFlags(held)); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	for _, m := range mods {
+		held[m] = true
+	}
+	for i := len(mods) - 1; i >= 0; i-- {
+		delete(held, mods[i])
+		if err := PostKey(mods[i], false, ModifierFlags(held)); err != nil {
+			return err
+		}
+	}
+	return nil
+}

@@ -31,7 +31,8 @@ Each slot has a mode:
 - keys: the pad itself sends a macropad action: a combo such as cmd+shift+4, a sequence of up to
   five comma-separated combos such as "cmd+a, cmd+c", or a media/mouse action such as volume-up,
   play, click. Modifiers: ctrl, opt, shift, cmd. Use this for system shortcuts (screenshots,
-  Spotlight): they ignore synthetic keystrokes.
+  Spotlight): they ignore synthetic keystrokes. A combo of only modifiers (ropt, ctrl+shift)
+  is held while the key is held.
 - script: this computer runs a script file (action = path).
 - shell: this computer runs a command line (action).
 - macro: this computer plays a macro from the library (macro_id; see list_macros / set_macro).

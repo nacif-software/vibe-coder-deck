@@ -38,6 +38,11 @@ func (f *fakeRunner) SendKeys(action string) error {
 	return nil
 }
 
+func (f *fakeRunner) HoldKeys(action string, down bool) error {
+	f.record("hold:" + action + ":" + map[bool]string{true: "down", false: "up"}[down])
+	return nil
+}
+
 func (f *fakeRunner) RunShell(command string) (int, string, error) {
 	f.record("shell:" + command)
 	return f.exit, f.output, nil
@@ -270,5 +275,29 @@ func TestKeysModeIsTypedWhenSwitching(t *testing.T) {
 	s.SetProfileSwitching(true)
 	if out := wait(t, d.Down(Key2)); !out.Ran || len(r.Calls()) != 1 || r.Calls()[0] != "keys:cmd+shift+4" {
 		t.Fatalf("out %+v calls %v", out, r.Calls())
+	}
+}
+
+// A keys slot that is only modifiers ("ropt", "ctrl+shift") is meant to be held:
+// with switching on the pad sends the hotkey, so the program holds the
+// modifiers from the key going down until it comes up. Press (run now) taps it.
+func TestModifierOnlyKeyIsHeldWhileDown(t *testing.T) {
+	d, s, r := newDispatcher(t, "")
+	s.SaveKey(Key{Slot: Key3, Mode: ModeKeys, Action: "ropt", SingleInstance: true})
+	s.SetProfileSwitching(true)
+	if out := wait(t, d.Down(Key3)); !out.Ran || len(r.Calls()) != 1 || r.Calls()[0] != "hold:ropt:down" {
+		t.Fatalf("down: out %+v calls %v", out, r.Calls())
+	}
+	d.Up(Key3)
+	if calls := r.Calls(); len(calls) != 2 || calls[1] != "hold:ropt:up" {
+		t.Fatalf("up: calls %v", calls)
+	}
+	if out, _ := d.Press(Key3); !out.Ran || len(r.Calls()) != 3 || r.Calls()[2] != "keys:ropt" {
+		t.Fatalf("press: out %+v calls %v", out, r.Calls())
+	}
+	// Up without a Down holds nothing and releases nothing.
+	d.Up(Key3)
+	if calls := r.Calls(); len(calls) != 3 {
+		t.Fatalf("stray up: calls %v", calls)
 	}
 }

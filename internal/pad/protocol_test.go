@@ -134,3 +134,15 @@ func TestLEDPackets(t *testing.T) {
 		t.Fatal("mode 3 accepted")
 	}
 }
+
+func TestModifierOnlyIsAComboWithoutAKey(t *testing.T) {
+	cases := map[string]bool{
+		"ropt": true, "ctrl+shift": true, " Right Option ": false, "ropt+a": false, "play": false,
+		"ctrl, a": false, "ropt, shift": false, "": false, "click": false, "shift+click": false,
+	}
+	for in, want := range cases {
+		if got := ModifierOnly(in); got != want {
+			t.Errorf("ModifierOnly(%q) = %v, want %v", in, got, want)
+		}
+	}
+}

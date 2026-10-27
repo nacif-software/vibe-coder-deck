@@ -280,3 +280,23 @@ func Frontmost() (string, error) {
 	}
 	return name, nil
 }
+
+// HoldKeys presses or releases the modifiers of a modifier-only action on
+// the virtual keyboard, in combo order going down and in reverse coming up.
+func (Runner) HoldKeys(action string, down bool) error {
+	mods, err := holdModifiers(action)
+	if err != nil {
+		return err
+	}
+	if !down {
+		for i, j := 0, len(mods)-1; i < j; i, j = i+1, j-1 {
+			mods[i], mods[j] = mods[j], mods[i]
+		}
+	}
+	for _, m := range mods {
+		if err := PostKey(m, down); err != nil {
+			return err
+		}
+	}
+	return nil
+}

@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/nacif-software/vibe-coder-deck/internal/pad"
 )
 
 // Runner does the work of a dispatched key on this machine.
@@ -16,6 +18,10 @@ type Runner interface {
 	// or mouse action) like a real keyboard: what a keys-mode slot does when
 	// profile switching has the pad send hotkeys only.
 	SendKeys(action string) error
+	// HoldKeys presses (down) or releases the modifiers of a modifier-only
+	// action ("ropt", "ctrl+shift"): what a keys-mode slot of only modifiers
+	// does while the pad's key is held and the pad sends hotkeys only.
+	HoldKeys(action string, down bool) error
 	// PlayMacro plays steps until they end or ctx is cancelled.
 	PlayMacro(ctx context.Context, steps []Step) (exitCode int, output string, err error)
 }
@@ -56,11 +62,15 @@ type Dispatcher struct {
 	active map[Slot]*activation // macros looping on a held key or a toggle
 }
 
-// activation is a repeat, toggle or sequence macro running on a key.
+// activation is a repeat, toggle or sequence macro running on a key, or
+// modifiers held on it (kindHeld).
 type activation struct {
 	kind   MacroKind
 	cancel context.CancelFunc
 }
+
+// kindHeld marks a key whose modifiers are held until it comes up.
+const kindHeld MacroKind = "held-keys"
 
 const outputTail = 2000
 
@@ -121,6 +131,37 @@ func (d *Dispatcher) Press(slot Slot) (Outcome, error) {
 func (d *Dispatcher) Down(slot Slot) <-chan Outcome {
 	done := make(chan Outcome, 1)
 	k, err := d.key(slot)
+	if err == nil && k.Mode == ModeKeys && pad.ModifierOnly(k.Action) {
+		if on, _ := d.Store.ProfileSwitching(); !on {
+			done <- Outcome{Slot: slot, Reason: "not-dispatched"}
+			return done
+		}
+		d.mu.Lock()
+		if d.active[slot] != nil {
+			d.mu.Unlock()
+			return nil // still held
+		}
+		if d.active == nil {
+			d.active = map[Slot]*activation{}
+		}
+		release := func() {
+			if err := d.Runner.HoldKeys(k.Action, false); err != nil {
+				d.logf("%s: release %s: %v", slot, k.Action, err)
+			}
+		}
+		d.active[slot] = &activation{kind: kindHeld, cancel: release}
+		d.mu.Unlock()
+		d.logf("%s: holds %s", slot, k.Action)
+		if err := d.Runner.HoldKeys(k.Action, true); err != nil {
+			d.mu.Lock()
+			delete(d.active, slot)
+			d.mu.Unlock()
+			done <- Outcome{Slot: slot, Ran: true, ExitCode: 1, Output: err.Error()}
+			return done
+		}
+		done <- Outcome{Slot: slot, Ran: true}
+		return done
+	}
 	var m Macro
 	if err == nil && k.Mode == ModeMacro {
 		m, err = d.Store.Macro(k.MacroID)
@@ -177,13 +218,19 @@ func (d *Dispatcher) Down(slot Slot) <-chan Outcome {
 	return done
 }
 
-// Up is the pad's key released: it ends a repeat or the hold of a sequence.
+// Up is the pad's key released: it ends a repeat or the hold of a sequence,
+// and lets go of held modifiers.
 func (d *Dispatcher) Up(slot Slot) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if a := d.active[slot]; a != nil && a.kind != MacroToggle {
-		a.cancel()
+	a := d.active[slot]
+	if a == nil || a.kind == MacroToggle {
+		return
 	}
+	if a.kind == kindHeld {
+		delete(d.active, slot)
+	}
+	a.cancel()
 }
 
 // pauseBetweenLoops keeps a macro of instant steps from spinning the CPU.

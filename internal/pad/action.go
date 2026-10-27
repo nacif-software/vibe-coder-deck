@@ -175,3 +175,13 @@ func parseStep(step string) (Action, error) {
 	}
 	return Action{}, fmt.Errorf("unknown key %q", token)
 }
+
+// ModifierOnly reports whether an action is one combo of modifiers without a
+// key ("ropt", "ctrl+shift"): a key the pad holds while it is pressed.
+func ModifierOnly(action string) bool {
+	a, err := ParseAction(action)
+	if err != nil || a.Kind != KindKeys || len(a.Steps) != 1 {
+		return false
+	}
+	return a.Steps[0].Code == 0 && a.Steps[0].Mods != 0
+}

@@ -177,7 +177,44 @@ var (
 	user32                       = windows.NewLazySystemDLL("user32.dll")
 	procGetForegroundWindow      = user32.NewProc("GetForegroundWindow")
 	procGetWindowThreadProcessId = user32.NewProc("GetWindowThreadProcessId")
+	procKeybdEvent               = user32.NewProc("keybd_event")
 )
+
+// Virtual-key codes of the modifiers (winuser.h).
+var modifierVKs = map[string]uintptr{
+	"ctrl": 0x11, "control": 0x11, "rctrl": 0xA3, "shift": 0x10, "rshift": 0xA1,
+	"opt": 0x12, "alt": 0x12, "option": 0x12, "ropt": 0xA5, "ralt": 0xA5,
+	"cmd": 0x5B, "win": 0x5B, "command": 0x5B, "rcmd": 0x5C, "rwin": 0x5C,
+}
+
+func IsModifier(name string) bool {
+	_, ok := modifierVKs[strings.ToLower(strings.TrimSpace(name))]
+	return ok
+}
+
+const keyeventfKeyup = 0x0002
+
+// HoldKeys presses or releases the modifiers of a modifier-only action with
+// keybd_event, in combo order going down and in reverse coming up.
+func (Runner) HoldKeys(action string, down bool) error {
+	mods, err := holdModifiers(action)
+	if err != nil {
+		return err
+	}
+	if !down {
+		for i, j := 0, len(mods)-1; i < j; i, j = i+1, j-1 {
+			mods[i], mods[j] = mods[j], mods[i]
+		}
+	}
+	var flags uintptr
+	if !down {
+		flags = keyeventfKeyup
+	}
+	for _, m := range mods {
+		procKeybdEvent.Call(modifierVKs[m], 0, flags, 0)
+	}
+	return nil
+}
 
 // Frontmost is the executable name of the foreground window's process,
 // without ".exe" (for example "Orca").
