@@ -226,23 +226,34 @@ Dock, with a menu bar, cmd+Q and a place in Force Quit, so it stays reachable wh
 is hidden behind the notch. Closing the window hides it; the keys keep working until **Quit**. A
 login start keeps the window hidden.
 
-The page's own menu (☰, top right) has **Restart app**, **Logs** (the tail of `deck.log`, live,
-with copy and open buttons), **Debug mode** (also logs polled requests, recorder events, raw pad
-keystrokes and hotkeys; remembered across restarts) and the **AI setup (MCP)** section. The ☀︎/☾
-button switches light and dark; until pressed the page follows the system.
+The gear (top right) opens **Settings**, a view of its own laid out like G HUB's, with a list on the
+left:
+
+- **General**: **Launch app on login** (desktop app only), **Appearance** (system, light or dark),
+  the macOS **Permissions** and whether each is on, and **Restart app**.
+- **Updates**: the current version, **Check for update**, **Enable Automatic Updates** and the
+  release notes of every version.
+- **Logs**: **Debug mode** (also logs polled requests, recorder events, raw pad keystrokes and
+  hotkeys; remembered across restarts) and the tail of `deck.log`, live, with copy and open buttons.
+- **AI setup**: the MCP install buttons.
+- **About**: the version, its notes and the source repository.
+
+The gear again goes back to the pad. The ☀︎/☾ button in the header switches light and dark too.
 
 ## Updates and patch notes
 
 The app keeps itself current. Twenty seconds after it starts, and every six hours, it asks GitHub
-for the newest release. With **Download updates automatically** on (the default) a newer release is
-downloaded in the background and verified against the release's `checksums.txt`; the page then shows
+for the newest release. With automatic updates on (the default) a newer release is
+downloaded in the background and verified against the release's `checksums.txt` (**Enable Automatic
+Updates** in Settings › Updates); the page then shows
 a banner and the menu bar item reads **Restart to update**. Nothing is installed until you click:
 the app on disk is swapped for the new one and the app restarts. Development builds (made from a
 commit, not a tag) are never updated automatically.
 
-**What's new** in the page's menu (☰) lists every release with its notes, straight from GitHub, or
-from the changelog built into the app when GitHub cannot be reached. The first start of a new
-version opens it once.
+**Settings › Updates** lists every release with its notes, straight from GitHub, or from the
+changelog built into the app when GitHub cannot be reached. The first start of a new version opens
+a **What's New in Version …** card with that version's notes (**See release notes** opens the
+release page, **Got it** closes it); the update banner and About open it too.
 
 ```sh
 vibe-coder-deck update              # current and latest version, with the notes
@@ -374,7 +385,7 @@ under the host's default CSP.
 
 ### Install into your AI tools
 
-Through the app: the **AI setup (MCP)** section in the page's menu has one button per tool. Or from
+Through the app: **Settings › AI setup** has one button per tool. Or from
 a shell:
 
 ```sh

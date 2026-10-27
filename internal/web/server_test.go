@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -204,6 +205,28 @@ func TestRestartEndpoint(t *testing.T) {
 	}
 	if rec := do(t, h, "POST", "/api/app/restart", ""); rec.Code != 200 || restarted != 1 {
 		t.Fatalf("status %d restarted %d", rec.Code, restarted)
+	}
+}
+
+func TestLoginItemEndpoint(t *testing.T) {
+	h, _, _ := newServer(t)
+	if rec := do(t, h, "GET", "/api/app", ""); !strings.Contains(rec.Body.String(), `"login_item":null`) {
+		t.Fatalf("without the app: %s", rec.Body)
+	}
+	if rec := do(t, h, "PUT", "/api/app/login", `{"on":true}`); rec.Code != 501 {
+		t.Fatalf("without the app: status %d", rec.Code)
+	}
+	on := false
+	h.(*Server).LoginItem = &LoginItem{Enabled: func() bool { return on }, Set: func(v bool) error { on = v; return nil }}
+	if rec := do(t, h, "GET", "/api/app", ""); !strings.Contains(rec.Body.String(), `"login_item":false`) {
+		t.Fatalf("app info: %s", rec.Body)
+	}
+	if rec := do(t, h, "PUT", "/api/app/login", `{"on":true}`); rec.Code != 200 || !on || !strings.Contains(rec.Body.String(), `"login_item":true`) {
+		t.Fatalf("status %d on %v: %s", rec.Code, on, rec.Body)
+	}
+	h.(*Server).LoginItem.Set = func(bool) error { return errors.New("launchctl failed") }
+	if rec := do(t, h, "PUT", "/api/app/login", `{"on":false}`); rec.Code != 500 || !strings.Contains(rec.Body.String(), "launchctl failed") {
+		t.Fatalf("failure: status %d %s", rec.Code, rec.Body)
 	}
 }
 

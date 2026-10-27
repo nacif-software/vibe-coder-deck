@@ -90,14 +90,21 @@ type Permission struct {
 	Granted bool   `json:"granted"`
 }
 
+// LoginItem starts the app at login; nil outside the desktop app.
+type LoginItem struct {
+	Enabled func() bool
+	Set     func(on bool) error
+}
+
 type Server struct {
 	Recorder    Recorder
 	Pad         PadWatcher
 	Permissions Permissions
 	// Restart quits the app and opens it again; nil outside the desktop app.
-	Restart func() error
-	Apps    AppsProvider
-	Active  ActiveFunc
+	Restart   func() error
+	LoginItem *LoginItem
+	Apps      AppsProvider
+	Active    ActiveFunc
 	// LogPath is the deck's log file, shown in the page; OpenPath opens it.
 	LogPath    string
 	OpenPath   func(path string) error
@@ -140,6 +147,7 @@ func New(store *deck.Store, modifiers string, sync SyncFunc) *Server {
 	s.mux.HandleFunc("PUT /api/macros/{id}", s.saveMacro)
 	s.mux.HandleFunc("DELETE /api/macros/{id}", s.deleteMacro)
 	s.mux.HandleFunc("POST /api/app/restart", s.restart)
+	s.mux.HandleFunc("PUT /api/app/login", s.setLoginItem)
 	s.routeUpdates()
 	assets, _ := fs.Sub(static, "static")
 	s.mux.Handle("GET /", http.FileServerFS(assets))
@@ -464,7 +472,31 @@ func (s *Server) requestPermission(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) appInfo(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, 200, map[string]any{"can_restart": s.Restart != nil, "version": s.Version})
+	var login any // null: this is not the desktop app
+	if s.LoginItem != nil {
+		login = s.LoginItem.Enabled()
+	}
+	writeJSON(w, 200, map[string]any{"can_restart": s.Restart != nil, "version": s.Version, "login_item": login})
+}
+
+// setLoginItem turns starting at login on or off.
+func (s *Server) setLoginItem(w http.ResponseWriter, r *http.Request) {
+	if s.LoginItem == nil {
+		writeError(w, 501, errors.New("starting at login is set in the desktop app"))
+		return
+	}
+	var in struct {
+		On bool `json:"on"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeError(w, 400, err)
+		return
+	}
+	if err := s.LoginItem.Set(in.On); err != nil {
+		writeError(w, 500, err)
+		return
+	}
+	writeJSON(w, 200, map[string]bool{"login_item": s.LoginItem.Enabled()})
 }
 
 func (s *Server) restart(w http.ResponseWriter, r *http.Request) {

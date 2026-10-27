@@ -201,26 +201,69 @@ input[type=checkbox] { width: 16px; height: 16px; padding: 0; accent-color: var(
 }
 @media (prefers-reduced-motion: reduce) { .pressed { animation-duration: .01s; outline: 3px solid var(--ok); } }
 
-.drawer {
-  /* fixed, so that while it slides out (closed but still displayed) it never adds page scrollbars */
-  position: fixed; inset: 0 0 0 auto; margin: 0; height: 100vh; max-height: none; width: min(440px, 92vw); padding: 0; border: none;
-  border-left: 1px solid var(--border); background: var(--bg); color: var(--fg); overflow-y: auto;
-  transform: translateX(100%); transition: transform .22s ease-out, display .22s allow-discrete, overlay .22s allow-discrete;
-}
-.drawer[open] { transform: none; }
-.drawer:not([open]) { pointer-events: none; }
-@starting-style { .drawer[open] { transform: translateX(100%); } }
-.drawer::backdrop { background: rgb(0 0 0 / .4); }
-@media (prefers-reduced-motion: reduce) { .drawer { transition: none; } }
-.drawer-head { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; padding: 14px 16px 14px 24px; background: var(--bg); border-bottom: 1px solid var(--border); }
-.drawer-section { padding: 20px 24px; border-bottom: 1px solid var(--border); }
-.drawer-section h2 { font-size: 15px; margin: 0 0 4px; }
-.drawer .mcp-buttons { margin: 12px 0; }
-.logs-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+/* ---- settings: a view of its own, like G HUB's (nav on the left, a pane on the right) ---- */
+.gear[aria-pressed="true"] { background: color-mix(in srgb, var(--brand) 18%, var(--panel)); color: var(--brand); border-radius: 999px; }
+.settings-view { flex: 1; min-height: 0; display: grid; grid-template-columns: 300px 1fr; border-top: 1px solid var(--border); }
+.set-side { border-right: 1px solid var(--border); padding: 28px 24px; overflow-y: auto; }
+.set-nav { display: flex; flex-direction: column; gap: 6px; }
+.set-tab { font: inherit; font-size: 16px; display: flex; align-items: center; gap: 16px; text-align: left; background: none; border: none; color: var(--fg); padding: 14px 18px; border-radius: 10px; cursor: pointer; letter-spacing: .02em; }
+.set-tab:hover { background: var(--accent); }
+.set-tab.active { background: color-mix(in srgb, var(--brand) 18%, var(--panel)); color: var(--brand); }
+.set-tab:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.set-main { overflow-y: auto; padding: 32px 48px 48px; }
+.set-pane { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 4px; }
+.set-pane h2 { margin: 0 0 18px; font-size: 30px; font-weight: 700; letter-spacing: .01em; }
+.set-pane h3 { margin: 0 0 8px; font-size: 22px; font-weight: 700; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 14px 0; }
+.set-row[hidden] { display: none; }
+.set-row > label, .set-row > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; cursor: default; }
+.set-row > label { cursor: pointer; }
+.set-label { font-size: 16px; }
+.set-sub { color: var(--muted); font-size: 14px; }
+.set-group { border-top: 1px solid var(--border); margin-top: 18px; padding-top: 26px; }
+.set-group[hidden] { display: none; }
+.set-group-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+.set-group-head h3 { margin: 0; }
+.set-select { min-width: 180px; padding: 10px 14px; border-radius: 8px; background: var(--panel); }
+.set-pane .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.set-pane #log-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.set-pane .mcp-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+.perm-row .perm-state { font-size: 13px; font-weight: 600; }
+.perm-row .perm-state.on { color: var(--ok); }
+.perm-row .perm-state.off { color: var(--warn); }
+.perm-row .perm-actions { display: flex; align-items: center; gap: 12px; flex-direction: row; }
+.log-view { height: 340px; overflow: auto; margin: 10px 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
 .switch { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
-.log-view { height: 260px; overflow: auto; margin: 10px 0; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--accent); font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
-.drawer .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.drawer #log-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+
+/* A checkbox drawn as a switch (role="switch"; the native switch is Safari only). */
+input.toggle { appearance: none; -webkit-appearance: none; flex: none; width: 52px; height: 28px; margin: 0; padding: 0; border: none; border-radius: 999px; background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--border); position: relative; cursor: pointer; transition: background .15s; }
+input.toggle::before { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .3); transition: transform .15s; }
+input.toggle:checked { background: var(--brand); box-shadow: none; }
+input.toggle:checked::before { transform: translateX(24px); }
+input.toggle:disabled { opacity: .5; cursor: default; }
+input.toggle:focus { box-shadow: none; }
+input.toggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { input.toggle, input.toggle::before { transition: none; } }
+
+/* Pill buttons, as in G HUB: bold capitals. */
+.btn-pill { border-radius: 999px; padding: 12px 26px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; font-size: 14px; white-space: nowrap; text-decoration: none; }
+.btn-pill.btn-outline { border: 2px solid var(--border); }
+.btn-pill.btn-outline:hover { border-color: var(--muted); background: transparent; }
+
+/* What's New: a modal card with the notes, a rule and two pill buttons. */
+.wn { border: none; border-radius: 16px; padding: 0; width: min(520px, 92vw); max-height: min(86vh, 760px); background: var(--panel); color: var(--fg); display: none; flex-direction: column; overscroll-behavior: contain; }
+.wn[open] { display: flex; }
+.wn::backdrop { background: rgb(0 0 0 / .6); }
+.wn-body { overflow-y: auto; padding: 40px 36px 8px; min-height: 0; }
+.wn-title { margin: 0 0 28px; font-size: 32px; line-height: 1.2; font-weight: 700; }
+.wn-notes { color: var(--muted); font-size: 15px; line-height: 1.65; }
+.wn-notes h3, .wn-notes h4, .wn-notes h5, .wn-notes h6 { color: var(--fg); font-size: 17px; margin: 18px 0 4px; }
+.wn-notes h3:first-child, .wn-notes h4:first-child { margin-top: 0; }
+.wn-notes ul, .wn-notes ol { margin: 4px 0; padding-left: 20px; }
+.wn-notes p { margin: 6px 0; }
+.wn-notes a { color: var(--brand); }
+.wn-foot { display: flex; justify-content: flex-end; align-items: center; gap: 16px; margin: 0 36px; padding: 26px 0 32px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.wn-link svg { flex: none; }
 
 /* ---- icon field and picker ---------------------------------------------- */
 .label-row { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: end; }
@@ -371,10 +414,9 @@ input[type=checkbox] { width: 16px; height: 16px; padding: 0; accent-color: var(
 .ui-dialog input { width: 100%; margin-bottom: 16px; }
 .ui-dialog .btn-primary.danger { background: var(--danger); border-color: var(--danger); }
 
-/* updates: the banner and the drawer's What's new */
+/* updates: the banner and the release history in Settings › Updates */
 .alert-update { border-color: var(--brand); }
 .alert-update .btn-ghost { margin-left: auto; }
-.updates .row { align-items: center; flex-wrap: wrap; }
 .release-list { padding-right: 4px; }
 .release-list .release.more { display: none; }
 .release-list.expanded .release.more { display: block; }

@@ -165,7 +165,9 @@ type deckRuntime struct {
 // startDeck opens the store, starts the page and registers the hotkeys. A
 // hotkey registration failure is kept in hotkeyErr rather than returned, so
 // the app can still show the page and explain what to grant.
-func startDeck(addr, dbPath string) (*deckRuntime, error) {
+// startDeck runs the deck; desktop is true inside the desktop app, which can
+// also start itself at login.
+func startDeck(addr, dbPath string, desktop bool) (*deckRuntime, error) {
 	store, err := openStore(dbPath)
 	if err != nil {
 		return nil, err
@@ -225,6 +227,13 @@ func startDeck(addr, dbPath string) (*deckRuntime, error) {
 	server.OpenPath = func(path string) error { openBrowser(path); return nil }
 	if on, err := store.Debug(); err == nil {
 		debuglog.Set(on)
+	}
+	if desktop {
+		exe, _ := os.Executable()
+		server.LoginItem = &web.LoginItem{
+			Enabled: platform.LoginItemEnabled,
+			Set:     func(on bool) error { return platform.SetLoginItem(on, exe, dataDir()) },
+		}
 	}
 	server.Restart = func() error {
 		r.mu.Lock()
@@ -371,7 +380,7 @@ func serve(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	r, err := startDeck(*addr, *db)
+	r, err := startDeck(*addr, *db, false)
 	if err != nil {
 		return err
 	}
@@ -394,7 +403,7 @@ func appCmd(args []string) error {
 	}
 	executable, _ := os.Executable()
 	return app.Run(app.Options{
-		Start:            func() (app.Deck, error) { return startDeck(*addr, *db) },
+		Start:            func() (app.Deck, error) { return startDeck(*addr, *db, true) },
 		Notify:           platform.Notify,
 		LoginItemEnabled: platform.LoginItemEnabled,
 		SetLoginItem:     func(enabled bool) error { return platform.SetLoginItem(enabled, executable, dataDir()) },

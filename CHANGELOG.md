@@ -5,6 +5,20 @@ All notable changes to Vibe Coder Deck. The format follows
 GitHub Release, and the section below the version heading is that release's notes, shown in the
 app under **What's new**.
 
+## [Unreleased]
+
+### Changed
+- Settings left the side drawer: the gear in the header opens a Settings view laid out like
+  Logitech G HUB's, with General (launch at login, appearance, macOS permissions with their state,
+  restart), Updates (version, check for update, automatic updates, release notes), Logs, AI setup
+  and About. Settings switches are drawn as toggles.
+- What's new is a card like G HUB's: "What's New in Version …" with that version's notes, **See
+  release notes** and **Got it**. It opens once on the first start of a new version, and from the
+  update banner, Updates and About.
+
+### Added
+- **Launch app on login** in Settings › General (it was only in the menu bar menu).
+
 ## [0.1.3] - 2026-10-27
 
 ### Fixed

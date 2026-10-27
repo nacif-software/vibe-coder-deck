@@ -14,12 +14,15 @@
     const dark = themePick ? themePick === 'dark' : systemDark.matches;
     root.dataset.dark = dark ? '1' : '0';
     $('theme').setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+    $('appearance').value = themePick || '';
   }
-  $('theme').addEventListener('click', () => {
-    themePick = document.documentElement.dataset.dark === '1' ? 'light' : 'dark';
-    try { localStorage.setItem('theme', themePick); } catch { /* storage blocked */ }
+  function setTheme(pick) {
+    themePick = pick || null;
+    try { if (themePick) localStorage.setItem('theme', themePick); else localStorage.removeItem('theme'); } catch { /* storage blocked */ }
     applyTheme();
-  });
+  }
+  $('theme').addEventListener('click', () => setTheme(document.documentElement.dataset.dark === '1' ? 'light' : 'dark'));
+  $('appearance').addEventListener('change', () => setTheme($('appearance').value));
   systemDark.addEventListener('change', applyTheme);
   applyTheme();
 
@@ -439,14 +442,20 @@
     }
   });
 
-  /* ---- views: Devices | Profiles ---------------------------------------------- */
+  /* ---- views: Devices | Profiles | Settings ----------------------------------- */
+  // Settings is a view of its own (the gear in the header), like G HUB's.
+  let lastView = 'devices';
   document.querySelectorAll('.view-tab').forEach((t) => t.addEventListener('click', () => showView(t.dataset.view)));
   function showView(view) {
+    if (view !== 'settings') lastView = view;
     document.querySelectorAll('.view-tab').forEach((t) => t.classList.toggle('active', t.dataset.view === view));
     $('view-devices').classList.toggle('hidden', view !== 'devices');
     $('view-profiles').classList.toggle('hidden', view !== 'profiles');
+    $('view-settings').classList.toggle('hidden', view !== 'settings');
+    $('settings-btn').setAttribute('aria-pressed', String(view === 'settings'));
     if (view === 'devices') requestAnimationFrame(renderCallouts);
-    else renderProfiles();
+    else if (view === 'profiles') renderProfiles();
+    else showPane(settingsPane);
   }
 
   /* ---- profiles ------------------------------------------------------------------ */
@@ -1103,6 +1112,11 @@
       const { permissions } = await api('GET', '/api/permissions');
       const missing = permissions.filter((p) => !p.granted);
       $('perm-banner').classList.toggle('hidden', !missing.length);
+      $('perm-group').hidden = !permissions.length;
+      $('perm-settings').innerHTML = permissions.map((p) => `<div class="set-row perm-row">
+        <div><span class="set-label">${esc(p.label)}</span><span class="set-sub">For ${esc(p.why)}</span></div>
+        <div class="perm-actions"><span class="perm-state ${p.granted ? 'on' : 'off'}">${p.granted ? 'On' : 'Off'}</span>${p.granted ? '' : `<button type="button" class="btn btn-pill btn-primary" data-allow="${esc(p.name)}">Allow</button>`}</div>
+      </div>`).join('');
       $('perm-list').innerHTML = missing.map((p) => `<div class="perm">
         <span><strong>${esc(p.label)}</strong> <span class="muted">for ${esc(p.why)}</span></span>
         <button type="button" class="btn btn-primary btn-sm" data-allow="${esc(p.name)}">Allow</button>
@@ -1111,28 +1125,36 @@
     setTimeout(pollPermissions, 2000);
   }
 
-  $('perm-list').addEventListener('click', async (e) => {
+  const allowClick = async (e) => {
     const btn = e.target.closest('[data-allow]');
     if (!btn) return;
     btn.disabled = true;
     try { await api('POST', `/api/permissions/${btn.dataset.allow}`); } catch (err) { tell(err.message); }
-  });
+  };
+  $('perm-list').addEventListener('click', allowClick);
+  $('perm-settings').addEventListener('click', allowClick);
 
-  /* ---- menu drawer -------------------------------------------------------- */
-  // A modal <dialog>: Esc closes it natively, a click on the dimmed backdrop
-  // (the dialog itself, outside its content) closes it too.
-  const drawer = $('drawer');
-  $('menu').addEventListener('click', () => {
-    drawer.showModal();
-    $('menu').setAttribute('aria-expanded', 'true');
-  });
-  $('drawer-close').addEventListener('click', () => drawer.close());
-  drawer.addEventListener('click', (e) => { if (e.target === drawer) drawer.close(); });
-  drawer.addEventListener('close', () => $('menu').setAttribute('aria-expanded', 'false'));
+  /* ---- settings view ----------------------------------------------------- */
+  let settingsPane = 'general';
+  const settingsOpen = () => !$('view-settings').classList.contains('hidden');
+  $('settings-btn').addEventListener('click', () => showView(settingsOpen() ? lastView : 'settings'));
+  document.querySelectorAll('.set-tab').forEach((t) => t.addEventListener('click', () => showPane(t.dataset.pane)));
+  function showPane(pane) {
+    settingsPane = pane;
+    document.querySelectorAll('.set-tab').forEach((t) => {
+      t.classList.toggle('active', t.dataset.pane === pane);
+      t.setAttribute('aria-current', t.dataset.pane === pane ? 'page' : 'false');
+    });
+    document.querySelectorAll('.set-pane').forEach((p) => p.classList.toggle('hidden', p.dataset.pane !== pane));
+    clearTimeout(logTimer);
+    if (pane === 'logs') loadLogs().then(() => { $('log-view').scrollTop = $('log-view').scrollHeight; });
+    if (pane === 'updates') loadReleases();
+  }
+  const logsShown = () => settingsOpen() && settingsPane === 'logs';
 
-  /* ---- logs and debug mode (in the drawer) ------------------------------- */
-  // While the drawer is open the log tail refreshes every 2 s; it stays at
-  // the bottom unless you scrolled up to read.
+  /* ---- logs and debug mode (Settings › Logs) ------------------------------ */
+  // While the pane is shown the log tail refreshes every 2 s; it stays at the
+  // bottom unless you scrolled up to read.
   let logTimer = null;
   async function loadLogs() {
     try {
@@ -1144,13 +1166,11 @@
       $('debug').checked = out.debug;
       $('log-path').textContent = out.path;
     } catch { /* the app is restarting */ }
-    if (drawer.open) logTimer = setTimeout(loadLogs, 2000);
+    clearTimeout(logTimer);
+    if (logsShown()) logTimer = setTimeout(loadLogs, 2000);
   }
-  $('menu').addEventListener('click', () => { clearTimeout(logTimer); loadLogs().then(() => { $('log-view').scrollTop = $('log-view').scrollHeight; }); });
-  drawer.addEventListener('close', () => clearTimeout(logTimer));
   $('debug').addEventListener('change', async () => {
     try { await api('PUT', '/api/debug', { on: $('debug').checked }); } catch (err) { tell(err.message); }
-    clearTimeout(logTimer);
     loadLogs();
   });
   $('log-copy').addEventListener('click', async () => {
@@ -1167,6 +1187,10 @@
 
   /* ---- restart (desktop app only) ---------------------------------------- */
   api('GET', '/api/app').then((info) => {
+    if (info.login_item !== null && info.login_item !== undefined) {
+      $('login-row').hidden = false;
+      $('login-item').checked = !!info.login_item;
+    }
     if (!info.can_restart) return;
     document.querySelector('.restart-section').classList.remove('hidden');
     document.querySelectorAll('.restart').forEach((btn) => {
@@ -1179,13 +1203,18 @@
     });
   }).catch(() => {});
 
-  /* ---- updates (the drawer's Updates section and a banner) --------------- */
+  $('login-item').addEventListener('change', async () => {
+    const want = $('login-item').checked;
+    try { $('login-item').checked = (await api('PUT', '/api/app/login', { on: want })).login_item; } catch (err) { $('login-item').checked = !want; tell(err.message); }
+  });
+
+  /* ---- updates (Settings › Updates and a banner) ------------------------- */
   // The app looks for newer releases by itself; the page shows where it is
   // and offers the next step. Nothing is installed without a click.
   let upd = null;        // the last /api/update answer
   let updTimer = null;
   let updDismissed = ''; // the version whose banner was closed with Later
-  const vlabel = (v) => (v ? (v.startsWith('v') ? v : 'v' + v) : '');
+  const vlabel = (v) => (v ? (/^\d/.test(v) ? 'v' + v : v) : ''); // 0.1.3 → v0.1.3; dev stays dev
   const busyStates = ['checking', 'downloading', 'installing'];
   function updateWords(st) {
     const latest = st.latest ? vlabel(st.latest.version) : '';
@@ -1206,7 +1235,9 @@
     if (!upd) return;
     const st = upd.status;
     const [text, action] = updateWords(st);
-    $('update-version').textContent = `Version ${st.current || 'dev'}${st.release === false && st.state !== 'unavailable' ? ' (development build)' : ''}`;
+    const version = `${vlabel(st.current) || 'dev'}${st.release === false && st.state !== 'unavailable' ? ' (development build)' : ''}`;
+    $('update-version').textContent = version;
+    $('about-version').textContent = version;
     $('update-text').textContent = text;
     $('update-action').textContent = action;
     $('update-action').classList.toggle('hidden', !action);
@@ -1284,6 +1315,7 @@
       if ((m = line.match(/^(#{1,6})\s+(.*)$/))) { closeList(); const n = Math.min(m[1].length + 2, 6); out.push(`<h${n}>${inline(m[2])}</h${n}>`); }
       else if ((m = line.match(/^\s*[-*]\s+(.*)$/))) { if (list !== 'ul') { closeList(); list = 'ul'; out.push('<ul>'); } out.push(`<li>${inline(m[1])}</li>`); }
       else if ((m = line.match(/^\s*\d+[.)]\s+(.*)$/))) { if (list !== 'ol') { closeList(); list = 'ol'; out.push('<ol>'); } out.push(`<li>${inline(m[1])}</li>`); }
+      else if (list && /^\s+\S/.test(raw) && out[out.length - 1].endsWith('</li>')) out[out.length - 1] = out[out.length - 1].slice(0, -5) + ' ' + inline(line.trim()) + '</li>'; // a wrapped list item
       else if (!line.trim()) closeList();
       else { closeList(); out.push(`<p>${inline(line)}</p>`); }
     }
@@ -1291,11 +1323,16 @@
     return out.join('');
   }
   let releasesLoaded = false;
+  let releases = null; // the last /api/releases answer
+  async function fetchReleases(force) {
+    if (!releases || force) releases = await api('GET', '/api/releases');
+    return releases;
+  }
   async function loadReleases(force) {
     if (releasesLoaded && !force) return;
     $('release-list').innerHTML = '<p class="muted">Loading…</p>';
     try {
-      const out = await api('GET', '/api/releases');
+      const out = await fetchReleases(force);
       releasesLoaded = true;
       const cur = vlabel((upd && upd.status.current) || out.current || '');
       const items = out.releases.map((r, i) => {
@@ -1308,8 +1345,7 @@
           (r.url ? `<p><a href="${esc(r.url)}" target="_blank" rel="noopener">Release page</a></p>` : '') +
           '</article>';
       });
-      // Only the newest release shows at first; View more unfolds the rest (the
-      // drawer is the one thing that scrolls).
+      // Only the newest release shows at first; View more unfolds the rest.
       $('release-list').classList.remove('expanded');
       $('release-list').innerHTML = (items.join('') || '<p class="muted">No releases yet.</p>') +
         (items.length > 1 ? `<button type="button" id="release-more" class="btn btn-outline btn-sm release-more">View ${items.length - 1} more release${items.length > 2 ? 's' : ''}</button>` : '') +
@@ -1318,27 +1354,43 @@
       if (more) more.addEventListener('click', () => { $('release-list').classList.add('expanded'); more.remove(); });
     } catch (err) { $('release-list').innerHTML = `<p class="muted">${esc(err.message)}</p>`; }
   }
-  $('whats-new').addEventListener('toggle', () => { if ($('whats-new').open) loadReleases(); });
-  $('update-banner-notes').addEventListener('click', () => {
-    $('menu').click();
-    $('whats-new').open = true;
-    loadReleases();
-    $('whats-new').scrollIntoView({ block: 'nearest' });
-  });
+  // What's New: a modal with one release's notes, like G HUB's.
+  const wn = $('whats-new-dialog');
+  if (!('closedBy' in HTMLDialogElement.prototype)) { // closedby="any" fallback: a click on the backdrop closes
+    wn.addEventListener('click', (e) => {
+      if (e.target !== wn) return;
+      const r = wn.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) wn.close();
+    });
+  }
+  $('wn-ok').addEventListener('click', () => wn.close());
+  // openWhatsNew shows the notes of version (the running one when empty).
+  async function openWhatsNew(version, force) {
+    let out;
+    try { out = await fetchReleases(force); } catch (err) { tell(err.message); return; }
+    const want = vlabel(version || (upd && upd.status.current) || out.current || '');
+    const r = out.releases.find((x) => { const v = vlabel(x.version); return v === want || want.startsWith(v + '-'); }) || out.releases[0];
+    if (!r) { tell('No release notes yet.'); return; }
+    $('wn-title').textContent = `What's New in Version ${vlabel(r.version).replace(/^v/, '')}`;
+    $('wn-notes').innerHTML = md(r.notes) || '<p>No notes for this version.</p>';
+    $('wn-link').href = r.url || 'https://github.com/nacif-software/vibe-coder-deck/releases';
+    if (!wn.open) wn.showModal();
+    $('wn-notes').parentElement.scrollTop = 0;
+  }
+  $('update-banner-notes').addEventListener('click', () => openWhatsNew(upd && upd.status.latest ? upd.status.latest.version : ''));
+  $('update-whats-new').addEventListener('click', () => openWhatsNew(''));
+  $('about-whats-new').addEventListener('click', () => openWhatsNew(''));
   // The first start of a new version opens its notes once.
   loadUpdate().then(() => {
     if (!upd || !upd.whats_new) return;
-    $('menu').click();
-    $('whats-new').open = true;
-    loadReleases(true);
+    openWhatsNew('', true);
     api('POST', '/api/update/seen').catch(() => {});
   });
 
   /* ---- MCP install ------------------------------------------------------- */
   async function loadMCP() {
     let info;
-    try { info = await api('GET', '/api/mcp'); } catch { return; }
-    $('mcp').classList.remove('hidden');
+    try { info = await api('GET', '/api/mcp'); } catch { $('mcp-missing').classList.remove('hidden'); return; }
     $('mcp-buttons').innerHTML = info.clients.map((c) => `<button type="button" class="btn btn-outline btn-sm" data-client="${esc(c.id)}" title="${esc(c.note)}">Install in ${esc(c.name)}</button>`).join('');
     $('mcp-snippet').textContent =
       `HTTP (while the app runs): ${info.url}\n` +
