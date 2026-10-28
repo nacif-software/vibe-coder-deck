@@ -286,7 +286,7 @@ A **standard delay** replaces every recorded wait with a fixed one.
 
 | Step | Value |
 |---|---|
-| `keys` | a combo or sequence in pad syntax: `cmd+shift+4`, `cmd+a, cmd+c` |
+| `keys` | a combo or sequence in pad syntax: `cmd+shift+4`, `cmd+a, cmd+c`; a comma right after `+` is the comma key (`opt+,`) |
 | `text` | a string, emoji included |
 | `delay` | milliseconds |
 | `launch` | an app name or bundle path |

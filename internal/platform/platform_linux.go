@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/nacif-software/vibe-coder-deck/internal/deck"
+	"github.com/nacif-software/vibe-coder-deck/internal/pad"
 )
 
 // HotkeyModifiers is the macropad spelling of the modifiers dispatched slots
@@ -94,7 +95,7 @@ func sendCombo(combo string) error {
 // SendKeys types a pad action like a real keyboard: comma-separated combos,
 // media keys (play, volume-up…) and mouse buttons (click, right-click, middle-click).
 func (Runner) SendKeys(action string) error {
-	for _, part := range strings.Split(action, ",") {
+	for _, part := range pad.SplitSteps(action) {
 		if strings.TrimSpace(part) == "" {
 			continue
 		}
@@ -135,7 +136,7 @@ func (Runner) PlayMacro(ctx context.Context, steps []deck.Step) (int, string, er
 				return 65, fmt.Sprintf("step %d: %v", i+1, err), nil
 			}
 		case "keys":
-			for _, part := range strings.Split(step.Value, ",") {
+			for _, part := range pad.SplitSteps(step.Value) {
 				if strings.TrimSpace(part) == "" {
 					continue
 				}

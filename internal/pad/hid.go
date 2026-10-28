@@ -144,7 +144,7 @@ var aliases = map[string]string{
 	"rcommand": "rcmd", "rwin": "rcmd",
 	"return": "enter", "escape": "esc", "spacebar": "space", "-": "minus", "=": "equal",
 	"[": "lbracket", "]": "rbracket", "\\": "backslash", ";": "semicolon", "'": "quote",
-	"`": "grave", "backtick": "grave", ".": "period", "dot": "period", "/": "slash",
+	"`": "grave", "backtick": "grave", ",": "comma", ".": "period", "dot": "period", "/": "slash",
 	"pgup": "pageup", "pgdn": "pagedown", "ins": "insert", "prtsc": "printscreen",
 	"arrow-left": "left", "arrow-right": "right", "arrow-up": "up", "arrow-down": "down",
 	"play-pause": "play", "previous": "prev", "vol-up": "volume-up", "vol-down": "volume-down",

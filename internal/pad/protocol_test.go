@@ -146,3 +146,33 @@ func TestModifierOnlyIsAComboWithoutAKey(t *testing.T) {
 		}
 	}
 }
+
+func TestCommaAfterPlusIsTheCommaKey(t *testing.T) {
+	for in, want := range map[string]string{
+		"opt+,":          "opt+,",
+		",":              ",",
+		"cmd+a, cmd+c":   "cmd+a|cmd+c",
+		"cmd+a, opt+,":   "cmd+a|opt+,",
+		"opt+,, cmd+c":   "opt+,|cmd+c",
+		"cmd+a, ,":       "cmd+a|,",
+		"cmd+a,":         "cmd+a|",
+		"opt + , ,cmd+v": "opt + ,|cmd+v",
+	} {
+		var got []string
+		for _, s := range SplitSteps(in) {
+			got = append(got, strings.TrimSpace(s))
+		}
+		if strings.Join(got, "|") != want {
+			t.Errorf("SplitSteps(%q) = %q, want %q", in, got, want)
+		}
+	}
+	for _, text := range []string{"opt+,", "opt+comma"} {
+		a, err := ParseAction(text)
+		if err != nil || a.Kind != KindKeys || len(a.Steps) != 1 || a.Steps[0] != (Keystroke{Mods: 0x04, Code: 0x36}) {
+			t.Errorf("ParseAction(%q) = %+v, %v", text, a, err)
+		}
+	}
+	if a, err := ParseAction("cmd+a, opt+,"); err != nil || len(a.Steps) != 2 || a.Steps[1] != (Keystroke{Mods: 0x04, Code: 0x36}) {
+		t.Errorf("sequence ending in opt+, = %+v, %v", a, err)
+	}
+}

@@ -80,11 +80,29 @@ func codes() (map[string]byte, map[string]uint16) {
 	return keyCodes, mediaCodes
 }
 
+// SplitSteps splits an action into its comma-separated combos. A comma that
+// starts a combo or follows a "+" is the comma key ("opt+,"), not a separator.
+func SplitSteps(text string) []string {
+	var steps []string
+	var cur strings.Builder
+	for _, r := range text {
+		if r == ',' {
+			if s := strings.TrimSpace(cur.String()); s != "" && !strings.HasSuffix(s, "+") {
+				steps = append(steps, cur.String())
+				cur.Reset()
+				continue
+			}
+		}
+		cur.WriteRune(r)
+	}
+	return append(steps, cur.String())
+}
+
 // ParseAction reads an action in the pad syntax: combos of modifiers and at
 // most one key, up to MaxSteps of them separated by commas, or a media key
 // alone, or a mouse action with modifiers.
 func ParseAction(text string) (Action, error) {
-	raw := strings.Split(text, ",")
+	raw := SplitSteps(text)
 	steps := make([]string, len(raw))
 	any := false
 	for i, s := range raw {

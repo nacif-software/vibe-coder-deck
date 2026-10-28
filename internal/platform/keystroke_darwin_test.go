@@ -11,6 +11,7 @@ func TestAppleScriptForCombo(t *testing.T) {
 		"ctrl+left":   `key code 123 using {control down}`,
 		"opt+p":       `keystroke "p" using {option down}`,
 		"comma":       `keystroke ","`,
+		"opt+,":       `keystroke "," using {option down}`,
 	}
 	for combo, want := range cases {
 		got, err := AppleScriptForCombo(combo)

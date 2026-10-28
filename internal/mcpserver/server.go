@@ -29,8 +29,8 @@ rows of three) and a knob (knob-left, knob-press, knob-right). The pad can only 
 Each slot has a mode:
 - off: nothing.
 - keys: the pad itself sends a macropad action: a combo such as cmd+shift+4, a sequence of up to
-  five comma-separated combos such as "cmd+a, cmd+c", or a media/mouse action such as volume-up,
-  play, click. Modifiers: ctrl, opt, shift, cmd. Use this for system shortcuts (screenshots,
+  five comma-separated combos such as "cmd+a, cmd+c" (a comma after "+" is the comma key: opt+,),
+  or a media/mouse action such as volume-up, play, click. Modifiers: ctrl, opt, shift, cmd. Use this for system shortcuts (screenshots,
   Spotlight): they ignore synthetic keystrokes. A combo of only modifiers (ropt, ctrl+shift)
   is held while the key is held.
 - script: this computer runs a script file (action = path).

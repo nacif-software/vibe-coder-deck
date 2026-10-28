@@ -17,6 +17,7 @@ import (
 	"golang.org/x/sys/windows"
 
 	"github.com/nacif-software/vibe-coder-deck/internal/deck"
+	"github.com/nacif-software/vibe-coder-deck/internal/pad"
 )
 
 // HotkeyModifiers is the macropad spelling of the modifiers dispatched slots
@@ -125,7 +126,7 @@ func (Runner) PlayMacro(ctx context.Context, steps []deck.Step) (int, string, er
 		}
 		switch step.Type {
 		case "keys":
-			for _, part := range strings.Split(step.Value, ",") {
+			for _, part := range pad.SplitSteps(step.Value) {
 				if strings.TrimSpace(part) == "" {
 					continue
 				}
@@ -252,7 +253,7 @@ func Notify(title, message string) {
 
 // SendKeys types a pad action with SendKeys.
 func (Runner) SendKeys(action string) error {
-	for _, part := range strings.Split(action, ",") {
+	for _, part := range pad.SplitSteps(action) {
 		if strings.TrimSpace(part) == "" {
 			continue
 		}
