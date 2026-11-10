@@ -101,6 +101,7 @@ var rec struct {
 	on      bool
 	started time.Time
 	events  []RecordedEvent
+	held    heldKeys
 }
 
 //export deckRecordEvent
@@ -129,6 +130,9 @@ func deckRecordEvent(kind, code, down, button C.int) {
 		if down == 1 {
 			t = "keydown"
 		}
+		if rec.held.repeat(t, name) {
+			return
+		}
 		rec.events = append(rec.events, RecordedEvent{Type: t, Value: name, At: at})
 		debuglog.Printf("record: %s %s (key code %d)", t, name, int(code))
 	}
@@ -150,7 +154,7 @@ func StartRecording(mouse bool) error {
 		RequestPermission(PermInputMonitoring)
 		return errors.New("could not listen to the keyboard: allow Vibe Coder Deck in System Settings › Privacy & Security › Input Monitoring, then relaunch it")
 	}
-	rec.on, rec.started, rec.events = true, time.Now(), nil
+	rec.on, rec.started, rec.events, rec.held = true, time.Now(), nil, heldKeys{}
 	return nil
 }
 

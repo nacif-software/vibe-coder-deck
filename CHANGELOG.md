@@ -5,6 +5,16 @@ All notable changes to Vibe Coder Deck. The format follows
 GitHub Release, and the section below the version heading is that release's notes, shown in the
 app under **What's new**.
 
+## [0.1.6] - 2026-11-10
+
+### Fixed
+- Recording a macro on macOS: holding a key recorded the keyboard's auto-repeat as a burst of key
+  presses. Now a held key is one key down, the wait and one key up, so holding only makes the
+  delay longer (Linux already did this).
+- The pad's labels and lines disappeared when the window was narrower than about 1310 px. The
+  layout is fixed rather than responsive: the window can no longer be made smaller than 1360 × 760,
+  where every label fits.
+
 ## [0.1.5] - 2026-10-28
 
 ### Fixed

@@ -23,7 +23,9 @@
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 "Avenir Next", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; }
+/* Fixed layout, not responsive: the window's minimum size (app.go) keeps the
+   pad's callouts room on both sides; a smaller browser window scrolls. */
+body { min-width: 1336px; min-height: 720px; margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 "Avenir Next", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; }
 code { background: var(--accent); border-radius: 4px; padding: 0 4px; font-size: 12px; }
 .hidden { display: none !important; }
 .muted { color: var(--muted); font-size: 12px; }
@@ -125,7 +127,6 @@ input[type=checkbox] { width: 16px; height: 16px; padding: 0; accent-color: var(
 .callout:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .callout .callout-icon { width: 16px; height: 16px; flex: none; object-fit: contain; }
 .callout .callout-icon.icon-text { width: auto; height: auto; font-size: 14px; }
-@media (max-width: 1180px) { .callouts, .callout-lines { display: none; } }
 /* ---- the pad, drawn like the hardware: frosted acrylic plate, black keycaps,
    knurled knob with a metal ring, brass screws, USB-C cable on top ---------- */
 .pad { display: flex; flex-direction: column; gap: 16px; width: 494px; max-width: 100%; }
@@ -290,7 +291,6 @@ input.toggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 3p
 .me-name-input:focus { box-shadow: none; }
 .me-title { margin: 0; font-size: 32px; font-weight: 700; }
 .me-type-cards { display: grid; grid-template-columns: repeat(4, 180px); gap: 28px; }
-@media (max-width: 900px) { .me-type-cards { grid-template-columns: repeat(2, 160px); } }
 .me-type-card { font: inherit; color: inherit; background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 18px; }
 .me-type-card .box { width: 180px; height: 180px; border-radius: 8px; background: var(--panel); display: flex; align-items: center; justify-content: center; transition: background .12s, box-shadow .12s; }
 .me-type-card:hover .box, .me-type-card:focus-visible .box { background: var(--panel-2); box-shadow: 0 0 0 2px var(--brand); outline: none; }

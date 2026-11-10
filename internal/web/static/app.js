@@ -212,7 +212,7 @@
     const dr = $('device').getBoundingClientRect();
     const lines = $('callout-lines');
     const box = $('callouts');
-    if (!state.keys.length || sr.width < dr.width + 360) { lines.innerHTML = ''; box.innerHTML = ''; return; }
+    if (!state.keys.length) { lines.innerHTML = ''; box.innerHTML = ''; return; }
     const rel = (r) => ({ left: r.left - sr.left, right: r.right - sr.left, top: r.top - sr.top, bottom: r.bottom - sr.top, cx: r.left + r.width / 2 - sr.left, cy: r.top + r.height / 2 - sr.top });
     const dev = rel(dr);
     const margin = 22;

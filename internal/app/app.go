@@ -91,8 +91,8 @@ func Run(o Options) error {
 		Name:      "main",
 		Width:     1360,
 		Height:    880,
-		MinWidth:  1000,
-		MinHeight: 640,
+		MinWidth:  1360, // the page is laid out for this size, not responsive
+		MinHeight: 760,
 		URL:       "/",
 		Hidden:    !o.ShowOnStart,
 	})
