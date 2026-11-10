@@ -3,8 +3,9 @@ package pad
 import "fmt"
 
 // USB writes the pad directly over USB with the protocol in protocol.go: no
-// macropad CLI, no libusb. macOS talks IOKit, Linux the hidraw node of the
-// config interface, Windows the HID device of that interface.
+// macropad CLI, no libusb. macOS talks IOKit, Linux usbfs (or the hidraw node
+// of the config interface, where the kernel makes one), Windows the HID device
+// of that interface.
 type USB struct{}
 
 // NewUSB is the default Writer.

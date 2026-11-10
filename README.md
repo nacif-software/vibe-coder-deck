@@ -119,7 +119,7 @@ and a banner offers **Apply to pad** to retry.
   [section](#linux-preview))
 - [Go 1.26](https://go.dev/dl/)
 - Nothing else: the app writes the pad over USB by itself (IOKit on macOS, no driver and no
-  permission; hidraw on Linux, with a udev rule). The `macropad` CLI of vibe-coder-keyboard is not
+  permission; usbfs on Linux, with a udev rule). The `macropad` CLI of vibe-coder-keyboard is not
   needed; `VCK_MACROPAD=macropad` makes the app use it instead.
 
 ### Download a release
@@ -186,7 +186,7 @@ vibe-coder-deck udev --install      # asks for your password; then unplug and re
 ```
 
 `udev --install` writes `/etc/udev/rules.d/70-vibe-coder-deck.rules` (print it with
-`vibe-coder-deck udev`), which gives the logged-in user the pad's input and hidraw nodes and
+`vibe-coder-deck udev`), which gives the logged-in user the pad's input and USB device nodes and
 `/dev/uinput` without root. The page's **Permissions** section shows what is still missing and
 its **Allow** buttons install the rule:
 
@@ -194,7 +194,7 @@ its **Allow** buttons install the rule:
 |---|---|
 | **Virtual keyboard** (`/dev/uinput`) | typing macros and forwarding the pad's keys |
 | **Read the pad's keys** | the hotkeys: the pad's own input device |
-| **Write the pad** | **Apply to pad** (hidraw) |
+| **Write the pad** | **Apply to pad** (the pad's USB device) |
 | **Record keystrokes** | the macro recorder reads every keyboard: `sudo usermod -aG input $USER`, then log out and in |
 
 Needs GTK 4.10+ and WebKitGTK 6.0 at run time (`libgtk-4-1`, `libwebkitgtk-6.0-4` on
@@ -422,7 +422,7 @@ internal/deck/           the domain: slots, modes, keys, macros, profiles, SQLit
 internal/mcpserver/      MCP tools, the MCP App view (ui/pad.html), client installers
 internal/update/         releases: versions, the GitHub API, the changelog, download, verify, install
 internal/pad/            the pad's USB protocol: action syntax, packets, transports (IOKit,
-                         hidraw, Windows HID), key tables; the macropad CLI as an opt-in fallback
+                         usbfs/hidraw, Windows HID), key tables; the macropad CLI as an opt-in fallback
 internal/platform/       OS specifics: global hotkeys, keystroke playback, the recorder,
                          permissions, start at login, Dock, frontmost app, pad watcher
 internal/web/            HTTP + JSON API and the page (static/index.html, app.js, style.css)
@@ -479,7 +479,7 @@ Developer ID certificate also satisfies Gatekeeper on other Macs.
 | Keys do nothing | **Accessibility** not granted, or another listener (skhd, a second instance) owns `ctrl+opt+cmd+1..9`. Check the hotkey status in the menu bar menu. |
 | Recorder refuses to start | **Input Monitoring** not granted. Without it macOS shows clicks but no keys. |
 | Permissions asked again after a rebuild | Create the "Vibe Coder Deck Local Signing" certificate in Keychain Access so the signature is stable. |
-| "Pad not connected" | Plug the pad (USB `1189:8890`). Saved keys are applied on the next **Apply to pad**. On Linux run `vibe-coder-deck udev --install` and replug the pad: its input and hidraw nodes need the rule. |
+| "Pad not connected" | Plug the pad (USB `1189:8890`). Saved keys are applied on the next **Apply to pad**. On Linux run `vibe-coder-deck udev --install` and replug the pad: its input and USB device nodes need the rule (after an update that changed it, run it again). |
 | Keys do nothing (Linux) | `/dev/uinput` or the pad's input device is not readable: the **Permissions** section says which; `vibe-coder-deck udev --install`, replug, restart the app. Under Wayland profile switching stays on the Desktop profile. |
 | A screenshot or Spotlight shortcut does not fire | Put it in **Keys** mode: system shortcuts ignore synthetic keystrokes. |
 | A key fires twice or overlaps | Set a cooldown or turn on single instance in **When it runs**. |

@@ -48,16 +48,16 @@ func Permissions() []Permission {
 			padInput = false
 		}
 	}
-	hidraw := len(nodes) == 0
-	if !hidraw {
-		if node := pad.HidrawNode(pad.VendorID, pad.ProductID, pad.ConfigInterface); node != "" {
-			hidraw = opens(node, os.O_WRONLY)
+	padWrite := len(nodes) == 0
+	if !padWrite {
+		if node, flag := pad.ConfigNode(pad.VendorID, pad.ProductID, pad.ConfigInterface); node != "" {
+			padWrite = opens(node, flag)
 		}
 	}
 	return []Permission{
 		{Name: PermAccessibility, Label: "Virtual keyboard (/dev/uinput)", Why: "Types macros and forwards the pad's keys through a virtual keyboard.", Granted: AccessibilityAllowed()},
 		{Name: PermInputMonitoring, Label: "Read the pad's keys", Why: "Reads the pad's own input device, so its hotkeys reach this app on X11 and Wayland alike.", Granted: padInput},
-		{Name: PermPadWrite, Label: "Write the pad", Why: "Writes the key layout to the pad (hidraw) when you apply it.", Granted: hidraw},
+		{Name: PermPadWrite, Label: "Write the pad", Why: "Writes the key layout to the pad (its USB device) when you apply it.", Granted: padWrite},
 		{Name: PermRecording, Label: "Record keystrokes", Why: "The macro recorder reads every keyboard (not the pad, which this app holds), which needs membership of the input group.", Granted: len(recordableNodes(devInputDir, nodes, false)) > 0},
 	}
 }

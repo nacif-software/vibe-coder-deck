@@ -10,10 +10,10 @@ import (
 	"strings"
 )
 
-// HidrawNode is the /dev/hidrawN of the pad's config interface: the kernel's
-// HID driver takes every HID interface, and writing an output report to its
-// node goes out through the interface's interrupt OUT endpoint. "" when the
-// pad is absent.
+// HidrawNode is the /dev/hidrawN of the pad's config interface, where the
+// kernel's HID driver took it: writing an output report to the node goes out
+// through the interface's interrupt OUT endpoint. "" when there is none,
+// which is the usual case (see usbfs_linux.go).
 func HidrawNode(vid, pid, iface int) string {
 	entries, _ := os.ReadDir("/sys/class/hidraw")
 	id := fmt.Sprintf("HID_ID=0003:%08X:%08X", vid, pid)
@@ -31,10 +31,27 @@ func HidrawNode(vid, pid, iface int) string {
 	return ""
 }
 
+// ConfigNode is the node the pad is written through and how it is opened:
+// the hidraw node when there is one, else the USB device node. "" when the
+// pad is absent.
+func ConfigNode(vid, pid, iface int) (path string, flag int) {
+	if node := HidrawNode(vid, pid, iface); node != "" {
+		return node, os.O_WRONLY
+	}
+	if port, err := findUSBPort(sysUSBDevices, vid, pid, iface); err == nil {
+		return port.node, os.O_RDWR
+	}
+	return "", 0
+}
+
 func sendPackets(packets [][]byte) error {
 	node := HidrawNode(VendorID, ProductID, ConfigInterface)
 	if node == "" {
-		return ErrNotConnected
+		port, err := findUSBPort(sysUSBDevices, VendorID, ProductID, ConfigInterface)
+		if err != nil {
+			return err
+		}
+		return sendUSB(port, packets)
 	}
 	f, err := os.OpenFile(node, os.O_WRONLY, 0)
 	if err != nil {

@@ -5,6 +5,16 @@ All notable changes to Vibe Coder Deck. The format follows
 GitHub Release, and the section below the version heading is that release's notes, shown in the
 app under **What's new**.
 
+## [0.1.7] - 2026-11-10
+
+### Fixed
+- Linux: the app could not write the pad ("pad not connected" from Apply, the CLI and MCP with the
+  pad plugged in). The pad's config interface has only an output endpoint, so the kernel's HID
+  driver makes no hidraw node for it. The app now writes it through usbfs (`/dev/bus/usb`), as
+  libusb does, and uses hidraw only where a node exists. The udev rule now also covers the pad's
+  USB device: run `vibe-coder-deck udev --install` again (or **Allow** next to "Write the pad")
+  and replug the pad.
+
 ## [0.1.6] - 2026-11-10
 
 ### Fixed
