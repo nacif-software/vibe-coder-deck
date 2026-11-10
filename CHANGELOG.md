@@ -5,6 +5,15 @@ All notable changes to Vibe Coder Deck. The format follows
 GitHub Release, and the section below the version heading is that release's notes, shown in the
 app under **What's new**.
 
+## [0.1.8] - 2026-11-10
+
+### Fixed
+- Updates failed with "GitHub 403: API rate limit exceeded". Without a token GitHub's API answers
+  only 60 requests an hour per IP address, which a shared network uses up. The app no longer uses
+  the API for the public repository: it reads the newest version from github.com's release page,
+  the files from the release's checksums.txt and the notes from that version's CHANGELOG.md. A
+  token (`vibe-coder-deck update --token`) still goes through the API.
+
 ## [0.1.7] - 2026-11-10
 
 ### Fixed

@@ -420,7 +420,7 @@ internal/app/            the native app: Wails window, menu bar icon, Dock, tray
 internal/deck/           the domain: slots, modes, keys, macros, profiles, SQLite store,
                          dispatcher, cooldown / single-instance gate, pad sync, key icons
 internal/mcpserver/      MCP tools, the MCP App view (ui/pad.html), client installers
-internal/update/         releases: versions, the GitHub API, the changelog, download, verify, install
+internal/update/         releases: versions, GitHub (pages, or the API with a token), the changelog, download, verify, install
 internal/pad/            the pad's USB protocol: action syntax, packets, transports (IOKit,
                          usbfs/hidraw, Windows HID), key tables; the macropad CLI as an opt-in fallback
 internal/platform/       OS specifics: global hotkeys, keystroke playback, the recorder,

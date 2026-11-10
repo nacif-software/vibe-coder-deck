@@ -15,12 +15,22 @@ import (
 var ErrNoRelease = errors.New("no release found: none is published, or the repository is private and needs a token")
 
 // Source is the GitHub repository that publishes the releases.
+//
+// The REST API answers 60 requests an hour per IP address without a token,
+// which a shared network uses up ("GitHub 403: API rate limit exceeded").
+// So without a token (a public repository) the releases are read from
+// github.com's pages instead (web.go); with a token, or an explicit API (a
+// test, GitHub Enterprise), from the API.
 type Source struct {
 	Repo   string       // owner/name
 	API    string       // https://api.github.com
+	Web    string       // https://github.com
+	Raw    string       // https://raw.githubusercontent.com
 	Token  string       // optional; needed for a private repository
 	Client *http.Client // nil: a client with a 30 s timeout
 }
+
+func (s Source) useAPI() bool { return s.Token != "" || s.API != "" }
 
 func (s Source) client() *http.Client {
 	if s.Client != nil {
@@ -110,6 +120,9 @@ func (s Source) getJSON(ctx context.Context, path string, out any) error {
 
 // Latest is the newest published release (drafts and prereleases excluded).
 func (s Source) Latest(ctx context.Context) (Release, error) {
+	if !s.useAPI() {
+		return s.latestWeb(ctx)
+	}
 	var g ghRelease
 	if err := s.getJSON(ctx, "/repos/"+s.Repo+"/releases/latest", &g); err != nil {
 		return Release{}, err
@@ -119,6 +132,9 @@ func (s Source) Latest(ctx context.Context) (Release, error) {
 
 // Releases is up to n published releases, newest first.
 func (s Source) Releases(ctx context.Context, n int) ([]Release, error) {
+	if !s.useAPI() {
+		return s.releasesWeb(ctx, n)
+	}
 	var gs []ghRelease
 	if err := s.getJSON(ctx, fmt.Sprintf("/repos/%s/releases?per_page=%d", s.Repo, n), &gs); err != nil {
 		return nil, err
